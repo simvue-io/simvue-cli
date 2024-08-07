@@ -169,6 +169,14 @@ def log_metrics(run_id: str, metrics: dict) -> None:
     simvue_cli.run.log_metrics(run_id, metrics)
 
 
+@simvue_run.command("log.event")
+@click.argument("run_id", type=str)
+@click.argument("event_message", type=str)
+def log_event(run_id: str, event_message: str) -> None:
+    """Log event to Simvue server"""
+    simvue_cli.run.log_event(run_id, event_message)
+
+
 @simvue_run.command("list")
 @click.pass_context
 @click.option(

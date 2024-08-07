@@ -113,6 +113,32 @@ def log_metrics(run_id: str, metrics: dict[str, int | float]) -> None:
         json.dump(run_data, out_f, indent=2)
 
 
+def log_event(run_id: str, event_message: str) -> None:
+    """Log an event for a given run
+
+    Parameters
+    ----------
+
+    run_id : str
+        identifier for the target run
+    event_message : str
+        the message to be displayed
+
+    """
+    _check_run_exists(run_id)
+
+    events_list: list[dict] = [
+        {
+            "message": event_message,
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),
+        }
+    ]
+
+    Simvue(None, uniq_id=run_id, mode="online").send_event(
+        msgpack.packb({"events": events_list, "run": run_id}, use_bin_type=True)
+    )
+
+
 def set_run_status(run_id: str, status: str, **kwargs) -> None:
     """Update the status of a Simvue run
 
