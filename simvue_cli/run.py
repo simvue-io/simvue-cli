@@ -23,8 +23,16 @@ CACHE_DIRECTORY = pathlib.Path().home().joinpath(".simvue", "cli_runs")
 
 
 def _check_run_exists(run_id: str) -> pathlib.Path:
-    if not (run_shelf_file := CACHE_DIRECTORY.joinpath(f"{run_id}.json")).exists():
-        raise ValueError(f"Run '{run_id}' does not exist or has terminated.")
+    run_shelf_file = CACHE_DIRECTORY.joinpath(f"{run_id}.json")
+    if not (run := Client().get_run(run_id)):
+        if run_shelf_file.exists():
+            run_shelf_file.unlink() 
+        raise ValueError(f"Run '{run_id}' does not exist.")
+
+    if (status := run.get("status")) in ("lost", "terminated", "completed"):
+        if run_shelf_file.exists():
+            run_shelf_file.unlink()
+        raise ValueError(f"Run '{run_id}' status is '{status}'.")
     return run_shelf_file
 
 
@@ -130,3 +138,8 @@ def get_runs_list(**kwargs) -> None:
     client = Client()
     runs = client.get_runs(**kwargs)
     return runs
+
+
+def get_run(run_id: str) -> None:
+    client = Client()
+    return client.get_run(run_id)

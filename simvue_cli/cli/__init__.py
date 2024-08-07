@@ -7,11 +7,13 @@ the user to submit metrics and retrieve information from the command line.
 """
 
 import pathlib
+import sys
 import shutil
 import click
 import click_log
 import click_option_group
 import logging
+from simvue.run import json
 import tabulate
 
 import simvue_cli.config
@@ -119,6 +121,13 @@ def create_run(
 @click.argument("run_id", type=str)
 def close_run(ctx, run_id: str) -> None:
     """Mark an active run as completed"""
+    if not (simvue_cli.run.get_run(run_id)):
+        error_msg = f"Run '{run_id}' not found"
+        if ctx.obj["plain"]:
+            print(error_msg)
+        else:
+            click.secho(error_msg, fg="red", bold=True)
+        sys.exit(1)
     try:
         simvue_cli.run.set_run_status(run_id, "completed")
     except ValueError as e:
@@ -127,9 +136,11 @@ def close_run(ctx, run_id: str) -> None:
             if not ctx.obj["plain"]
             else e.args[0]
         )
+        sys.exit(1)
 
 
 @simvue_run.command("abort")
+@click.pass_context
 @click.argument("run_id", type=str)
 @click.option(
     "--reason",
@@ -138,8 +149,15 @@ def close_run(ctx, run_id: str) -> None:
     default="Manual termination via CLI",
     show_default=True,
 )
-def abort_run(run_id: str, reason: str) -> None:
+def abort_run(ctx, run_id: str, reason: str) -> None:
     """Abort an active run"""
+    if not (simvue_cli.run.get_run(run_id)):
+        error_msg = f"Run '{run_id}' not found"
+        if ctx.obj["plain"]:
+            print(error_msg)
+        else:
+            click.secho(error_msg, fg="red", bold=True)
+        sys.exit(1)
     simvue_cli.run.set_run_status(run_id, "aborted", reason=reason)
 
 
@@ -192,7 +210,7 @@ def list_runs(
     status: bool,
     **kwargs,
 ) -> None:
-    """Retrieve runs from Simvue server"""
+    """Retrieve runs list from Simvue server"""
     kwargs |= {"filters": kwargs.get("filters" or [])}
     runs = simvue_cli.run.get_runs_list(**kwargs)
     columns = ["id"]
@@ -212,6 +230,27 @@ def list_runs(
 
     table = create_runs_display(columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=format)
     click.echo(table)
+
+
+@simvue_run.command("json")
+@click.argument("run_id", required=False)
+def get_run_json(run_id: str) -> None:
+    """Retrieve Run information from Simvue server
+
+    If no RUN_ID is provided the input is read from stdin
+    """
+    if not run_id:
+        run_id = input()
+
+    try:
+        run_info = simvue_cli.run.get_run(run_id)
+    except RuntimeError as e:
+        error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
+
+    click.echo(
+        json.dumps(run_info)
+    )
 
 
 @simvue.command("purge")
