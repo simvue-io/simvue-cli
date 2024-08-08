@@ -282,5 +282,46 @@ def purge_simvue(ctx) -> None:
     )
 
 
+@simvue.group("alert")
+@click.pass_context
+def simvue_alert(ctx) -> None:
+    """Create and list Simvue alerts"""
+    pass
+
+
+@simvue_alert.command("create")
+@click.pass_context
+@click.argument("name", type=SimvueName)
+@click.option("--abort", is_flag=True, help="Abort run if this alert is triggered", show_default=True)
+@click.option("--email", is_flag=True, help="Notify by email if triggered", show_default=True)
+def create_alert(ctx, name: str, abort: bool=False, email: bool=False) -> None:
+    """Create a User alert"""
+    simvue_cli.run.create_user_alert(name, abort, email)
+    click.echo(
+        f"Created alert '{name}'"
+    )
+
+
+@simvue.command("monitor")
+@click.pass_context
+@click.argument("run_id")
+@click.option("--delimiter", "-d", help="File row delimiter", default=" ", show_default=True, type=str)
+def monitor(ctx, run_id: str, delimiter: str) -> None:
+    metric_labels: list[str] = []
+    for i, line in enumerate(sys.stdin):
+        line = [element.strip() for element in line.split(delimiter)]
+        if i == 0:
+            metric_labels = line
+            continue
+        try:
+            simvue_cli.run.log_metrics(run_id, dict(zip(metric_labels, line)))
+        except (RuntimeError, ValueError) as e:
+            if ctx.obj["plain"]:
+                click.echo(e)
+            else:
+                click.secho(e, fg="red", bold=True)
+            sys.exit(1)
+
+
 if __name__ in "__main__":
     simvue()

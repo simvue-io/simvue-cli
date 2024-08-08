@@ -161,11 +161,31 @@ def set_run_status(run_id: str, status: str, **kwargs) -> None:
 
 
 def get_runs_list(**kwargs) -> None:
+    """Retrieve list of Simvue runs"""
     client = Client()
     runs = client.get_runs(**kwargs)
     return runs
 
 
 def get_run(run_id: str) -> None:
+    """Retrieve a Run from the Simvue server"""
     client = Client()
     return client.get_run(run_id)
+
+
+def get_alerts(**kwargs) -> None:
+    """Retrieve list of Simvue alerts"""
+    client = Client()
+    alerts = client.get_alerts()
+
+
+def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> None:
+    """Create a User alert"""
+    alert_data = {
+        "name": name,
+        "source": "user",
+        "abort": trigger_abort,
+        "notification": "email" if email_notify else "none"
+    }
+    Simvue(name=None, uniq_id="undefined", mode="online").add_alert(alert_data)
+
