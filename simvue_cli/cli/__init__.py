@@ -19,7 +19,7 @@ import tabulate
 import simvue_cli.config
 import simvue_cli.run
 
-from simvue_cli.cli.display import create_runs_display
+from simvue_cli.cli.display import create_runs_display, SIMVUE_LOGO
 from simvue_cli.types import SimvueName, SimvueFolder, JSONType
 
 from click_params import PUBLIC_URL
@@ -28,8 +28,9 @@ logger = logging.getLogger()
 click_log.basic_config(logger)
 
 
-@click.group("simvue")
+@click.group("simvue-cli")
 @click_log.simple_verbosity_option(logger)
+@click.version_option()
 @click.option(
     "--plain", help="Run without color/formatting", default=False, is_flag=True
 )
@@ -37,6 +38,7 @@ click_log.basic_config(logger)
 def simvue(ctx, plain: bool) -> None:
     ctx.ensure_object(dict)
     ctx.obj["plain"] = plain
+
 
 
 @simvue.group("config")
@@ -177,6 +179,14 @@ def log_event(run_id: str, event_message: str) -> None:
     simvue_cli.run.log_event(run_id, event_message)
 
 
+@simvue_run.command("metadata")
+@click.argument("run_id", type=str)
+@click.argument("metadata", type=JSONType)
+def update_metadata(run_id: str, metadata: dict) -> None:
+    """Update metadata for a run on the Simvue server"""
+    simvue_cli.run.update_metadata(run_id, metadata)
+
+
 @simvue_run.command("list")
 @click.pass_context
 @click.option(
@@ -261,6 +271,7 @@ def get_run_json(run_id: str) -> None:
     )
 
 
+
 @simvue.command("purge")
 @click.pass_context
 def purge_simvue(ctx) -> None:
@@ -304,10 +315,13 @@ def create_alert(ctx, name: str, abort: bool=False, email: bool=False) -> None:
 
 @simvue.command("monitor")
 @click.pass_context
-@click.argument("run_id")
 @click.option("--delimiter", "-d", help="File row delimiter", default=" ", show_default=True, type=str)
-def monitor(ctx, run_id: str, delimiter: str) -> None:
+def monitor(ctx, delimiter: str) -> None:
+    """Monitor stdin for delimited lines sending as metrics"""
     metric_labels: list[str] = []
+
+    run_id: str = simvue_cli.run.create_simvue_run(**run_params)
+    
     for i, line in enumerate(sys.stdin):
         line = [element.strip() for element in line.split(delimiter)]
         if i == 0:
@@ -321,6 +335,7 @@ def monitor(ctx, run_id: str, delimiter: str) -> None:
             else:
                 click.secho(e, fg="red", bold=True)
             sys.exit(1)
+    click.echo(run_id)
 
 
 if __name__ in "__main__":

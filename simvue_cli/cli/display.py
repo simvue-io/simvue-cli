@@ -2,7 +2,7 @@ from simvue.factory.proxy import typing
 import tabulate
 import click
 
-SIMVUE_LOG: str = """
+SIMVUE_LOGO: str = """
                                                                                                                                             
                                              *****                                                                                          
                                             ******                                                                                          

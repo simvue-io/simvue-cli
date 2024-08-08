@@ -8,6 +8,7 @@ Handles creation of and maintaining of runs between CLI calls
 import pathlib
 import uuid
 import json
+import typing
 import msgpack
 import time
 
@@ -29,7 +30,7 @@ def _check_run_exists(run_id: str) -> pathlib.Path:
             run_shelf_file.unlink() 
         raise ValueError(f"Run '{run_id}' does not exist.")
 
-    if (status := run.get("status")) in ("lost", "terminated", "completed"):
+    if (status := run.get("status")) in ("lost", "terminated", "completed", "failed"):
         if run_shelf_file.exists():
             run_shelf_file.unlink()
         raise ValueError(f"Run '{run_id}' status is '{status}'.")
@@ -157,7 +158,27 @@ def set_run_status(run_id: str, status: str, **kwargs) -> None:
 
     Simvue(name=None, uniq_id=run_id, mode="online").update(data={"status": status} | kwargs)
 
-    run_shelf_file.unlink()
+    if status in ("completed", "lost", "failed", "terminated"):
+        run_shelf_file.unlink()
+
+
+def update_metadata(run_id: str, metadata: dict[str, typing.Any], **kwargs) -> None:
+    """Update the metadata of a Simvue run
+
+    Parameters
+    ----------
+
+    run_id : str
+        unique identifier for the target run
+    metadata : dict
+        the new status for this run
+    **kwargs : dict
+        additional attributes required by the server to set the status
+
+    """
+    run_shelf_file = _check_run_exists(run_id)
+
+    Simvue(name=None, uniq_id=run_id, mode="online").update(data={"metadata": metadata} | kwargs)
 
 
 def get_runs_list(**kwargs) -> None:
