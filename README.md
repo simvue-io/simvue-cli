@@ -1,6 +1,8 @@
 # Simvue CLI
 
-Simvue CLI is a command line interface for interacting with a Simvue server instance. The tools is designed to aid in performing more basic operations compared to the Simvue Python API which should be used instead for more complicated parsing of data and execution of simulations.
+![cli_image](https://raw.githubusercontent.com/simvue-io/simvue-cli/main/CLI_image.png)
+
+Simvue CLI is a command line interface for interacting with a Simvue server instance. The tool is designed to aid in performing more basic operations compared to the Simvue Python API which should be used instead for more complicated parsing of data and execution of simulations.
 
 ## Modifying Simvue configuration
 

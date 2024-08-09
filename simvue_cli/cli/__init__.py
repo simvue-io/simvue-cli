@@ -53,7 +53,8 @@ def about_simvue(ctx) -> None:
     )
     width = shutil.get_terminal_size().columns
     click.echo(f"\n{width * '='}\n")
-    click.echo(f"\n{'\t' * int(0.04 * width)}© Copyright {datetime.datetime.today().strftime('%Y')} Simvue Development Team\n")
+    click.echo(f"\n{'\t' * int(0.04 * width)} Provided under the Apache-2.0 License")
+    click.echo(f"{'\t' * int(0.04 * width)}© Copyright {datetime.datetime.today().strftime('%Y')} Simvue Development Team\n")
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
         click.echo(
             f"{'\t' * int(0.04 * width)}CLI Version:\t{importlib.metadata.version(simvue_cli.__name__)}"
