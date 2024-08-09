@@ -117,6 +117,9 @@ def simvue_run(ctx) -> None:
 @click.option(
     "--create-only", help="Create run but do not start it", is_flag=True, default=False
 )
+@click.option(
+    "--timeout", help="Set a timeout in seconds after which this run will register as 'lost'", default=None
+)
 @click_option_group.optgroup.group(
     "Run attributes",
     help="Assign properties such as metadata and labelling to this run",
