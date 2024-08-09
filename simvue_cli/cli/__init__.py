@@ -12,9 +12,13 @@ import shutil
 import click
 import click_log
 import click_option_group
+import datetime
 import logging
-from simvue.run import json
+import importlib.metadata
+
+from simvue.run import contextlib, json
 import tabulate
+import simvue as simvue_client
 
 import simvue_cli.config
 import simvue_cli.run
@@ -39,6 +43,30 @@ def simvue(ctx, plain: bool) -> None:
     ctx.ensure_object(dict)
     ctx.obj["plain"] = plain
 
+
+@simvue.command("about")
+@click.pass_context
+def about_simvue(ctx) -> None:
+    """Display full information on Simvue instance"""
+    click.echo(
+        SIMVUE_LOGO
+    )
+    width = shutil.get_terminal_size().columns
+    click.echo(f"\n{width * '='}\n")
+    click.echo(f"\n{'\t' * int(0.04 * width)}© Copyright {datetime.datetime.today().strftime('%Y')} Simvue Development Team\n")
+    with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+        click.echo(
+            f"{'\t' * int(0.04 * width)}CLI Version:\t{importlib.metadata.version(simvue_cli.__name__)}"
+        )
+    with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+        click.echo(
+            f"{'\t' * int(0.04 * width)}API Version:\t{importlib.metadata.version(simvue_client.__name__)}"
+        )
+    with contextlib.suppress(Exception):
+        click.echo(
+            f"{'\t' * int(0.04 * width)}Server Version:\t{simvue_cli.run.get_server_version()}"
+        )
+    click.echo(f"\n{width * '='}\n")
 
 
 @simvue.group("config")

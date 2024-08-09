@@ -12,6 +12,8 @@ import typing
 import msgpack
 import time
 
+import simvue.api as sv_api
+
 from datetime import datetime, timezone
 
 from simvue.factory.proxy import Simvue
@@ -179,6 +181,12 @@ def update_metadata(run_id: str, metadata: dict[str, typing.Any], **kwargs) -> N
     run_shelf_file = _check_run_exists(run_id)
 
     Simvue(name=None, uniq_id=run_id, mode="online").update(data={"metadata": metadata} | kwargs)
+
+
+def get_server_version() -> None:
+    simvue_instance = Simvue(name=None, uniq_id="", mode="online")
+    response = sv_api.get(f"{simvue_instance._url}/api/version", headers=simvue_instance._headers)
+    return response.json().get("version")
 
 
 def get_runs_list(**kwargs) -> None:
