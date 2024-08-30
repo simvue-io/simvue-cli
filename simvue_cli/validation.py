@@ -10,8 +10,6 @@ import re
 import click
 
 from click.core import Context, Parameter
-from pydantic_core.core_schema import JsonType
-from simvue.factory.proxy import typing
 from simvue.models import FOLDER_REGEX, NAME_REGEX
 from simvue.run import json
 

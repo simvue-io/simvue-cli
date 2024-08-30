@@ -156,3 +156,11 @@ In cases where terminal colors or formatting are unavailable you can instead run
 ```sh
 simvue --plain run list
 ```
+
+## Checking server status
+
+Server response can be check using the `ping` command:
+
+```sh
+simvue ping
+```

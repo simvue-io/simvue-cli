@@ -191,18 +191,21 @@ def update_metadata(run_id: str, metadata: dict[str, typing.Any], **kwargs) -> N
         additional attributes required by the server to set the status
 
     """
-    run_shelf_file = _check_run_exists(run_id)
+    _check_run_exists(run_id)
 
     Simvue(name=None, uniq_id=run_id, mode="online").update(
         data={"metadata": metadata} | kwargs
     )
 
 
-def get_server_version() -> None:
+def get_server_version() -> typing.Union[str, int]:
     simvue_instance = Simvue(name=None, uniq_id="", mode="online")
     response = sv_api.get(
         f"{simvue_instance._url}/api/version", headers=simvue_instance._headers
     )
+    if response.status_code != 200:
+        return response.status_code
+
     return response.json().get("version")
 
 
@@ -221,8 +224,9 @@ def get_run(run_id: str) -> None:
 
 def get_alerts(**kwargs) -> None:
     """Retrieve list of Simvue alerts"""
+    #TODO: Implement alert listing
     client = Client()
-    alerts = client.get_alerts()
+    client.get_alerts()
 
 
 def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> None:

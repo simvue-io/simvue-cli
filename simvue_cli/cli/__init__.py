@@ -10,21 +10,24 @@ import pathlib
 import sys
 import shutil
 import click
+import time
 import click_log
 import click_option_group
 import datetime
 import logging
+import contextlib
 import importlib.metadata
 
-from simvue.run import contextlib, json
+from simvue.api import requests
 import tabulate
 import simvue as simvue_client
 
 import simvue_cli.config
 import simvue_cli.run
+import simvue_cli.server
 
 from simvue_cli.cli.display import create_runs_display, SIMVUE_LOGO
-from simvue_cli.types import SimvueName, SimvueFolder, JSONType
+from simvue_cli.validation import SimvueName, SimvueFolder, JSONType
 
 from click_params import PUBLIC_URL
 
@@ -43,6 +46,28 @@ def simvue(ctx, plain: bool) -> None:
     ctx.ensure_object(dict)
     ctx.obj["plain"] = plain
 
+
+@simvue.command("ping")
+def ping_server() -> None:
+    """Ping the Simvue server"""
+    successful_pings: int = 0
+    with contextlib.suppress(KeyboardInterrupt):
+        url = simvue_client.Client()._url
+        ip_address = simvue_cli.server.get_ip_of_url(url)
+        while True:
+            start_time = time.time()
+            try:
+                server_version: int | str = simvue_cli.run.get_server_version()
+                if (status_code := 200 if isinstance(server_version, str) else server_version) != 200:
+                    raise RuntimeError
+                successful_pings += 1
+                end_time = time.time()  # Record the end time
+                elapsed_time = (end_time - start_time) * 1000  # Convert to milliseconds
+                click.secho(f"Reply from {url} ({ip_address}): status_code={status_code}, time={elapsed_time:.2f}ms")
+            except (requests.ConnectionError, requests.Timeout, RuntimeError):
+                click.secho(f"Reply from {url} ({ip_address}): status_code={status_code}, error")
+
+            time.sleep(1)
 
 @simvue.command("about")
 @click.pass_context
@@ -64,8 +89,11 @@ def about_simvue(ctx) -> None:
             f"{'\t' * int(0.04 * width)}API Version:\t{importlib.metadata.version(simvue_client.__name__)}"
         )
     with contextlib.suppress(Exception):
+        server_version: int | str = simvue_cli.run.get_server_version()
+        if isinstance(server_version, int):
+            raise RuntimeError
         click.echo(
-            f"{'\t' * int(0.04 * width)}Server Version:\t{simvue_cli.run.get_server_version()}"
+            f"{'\t' * int(0.04 * width)}Server Version:\t{server_version}"
         )
     click.echo(f"\n{width * '='}\n")
 
