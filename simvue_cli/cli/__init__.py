@@ -202,39 +202,40 @@ def create_run(
 
 @simvue_run.command("remove")
 @click.pass_context
-@click.argument("run_id", type=str)
+@click.argument("run_ids", type=str, nargs=-1)
 @click.option("-i", "--interactive", help="Prompt for confirmation on removal", type=bool, default=False, is_flag=True)
-def delete_run(ctx, run_id: str, interactive: bool) -> None:
+def delete_run(ctx, run_ids: list[str], interactive: bool) -> None:
     """Remove a run from the Simvue server"""
-    if not (simvue_cli.run.get_run(run_id)):
-        error_msg = f"Run '{run_id}' not found"
+    for run_id in run_ids:
+        if not (simvue_cli.run.get_run(run_id)):
+            error_msg = f"Run '{run_id}' not found"
+            if ctx.obj["plain"]:
+                print(error_msg)
+            else:
+                click.secho(error_msg, fg="red", bold=True)
+            sys.exit(1)
+
+        if interactive:
+            remove = click.confirm(f"Remove run '{run_id}'?")
+            if not remove:
+                continue
+
+        try:
+            simvue_cli.run.delete_run(run_id)
+        except ValueError as e:
+            click.echo(
+                click.style(e.args[0], fg="red", bold=True)
+                if not ctx.obj["plain"]
+                else e.args[0]
+            )
+            sys.exit(1)
+
+        response_message = f"Run '{run_id}' removed successfully."
+
         if ctx.obj["plain"]:
-            print(error_msg)
+            print(response_message)
         else:
-            click.secho(error_msg, fg="red", bold=True)
-        sys.exit(1)
-
-    if interactive:
-        remove = click.confirm(f"Remove run '{run_id}'?")
-        if not remove:
-            return
-
-    try:
-        simvue_cli.run.delete_run(run_id)
-    except ValueError as e:
-        click.echo(
-            click.style(e.args[0], fg="red", bold=True)
-            if not ctx.obj["plain"]
-            else e.args[0]
-        )
-        sys.exit(1)
-
-    response_message = f"Run '{run_id}' removed successfully."
-
-    if ctx.obj["plain"]:
-        print(response_message)
-    else:
-        click.secho(response_message, bold=True, fg="green")
+            click.secho(response_message, bold=True, fg="green")
 
 
 @simvue_run.command("close")
