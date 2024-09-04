@@ -69,6 +69,28 @@ def ping_server() -> None:
 
             time.sleep(1)
 
+
+@simvue.command("whoami")
+@click.option("-u", "--user", help="print only the user name", default=False)
+@click.option("-t", "--tenant", help="print only the tenant", default=False)
+def whoami(user: bool, tenant: bool) -> None:
+    """Retrieve current user information"""
+    if user and tenant:
+        click.secho("cannot print 'only' with more than one choice")
+        raise click.Abort
+    user_info = simvue_cli.run.user_info()
+    print(user_info)
+    user_name = user_info.get("username")
+    tenant_info = user_info.get("tenant")
+    if user:
+        click.secho(user_name)
+    elif tenant:
+        click.secho(tenant_info)
+    else:
+        click.secho(f"{user_name}({tenant_info})")
+
+
+
 @simvue.command("about")
 @click.pass_context
 def about_simvue(ctx) -> None:
@@ -86,7 +108,7 @@ def about_simvue(ctx) -> None:
         )
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
         click.echo(
-            f"{'\t' * int(0.04 * width)}API Version:\t{importlib.metadata.version(simvue_client.__name__)}"
+            f"{'\t' * int(0.04 * width)}Python API Version:\t{importlib.metadata.version(simvue_client.__name__)}"
         )
     with contextlib.suppress(Exception):
         server_version: int | str = simvue_cli.run.get_server_version()
@@ -176,6 +198,43 @@ def create_run(
     run_id: str = simvue_cli.run.create_simvue_run(**run_params)
 
     click.echo(click.style(run_id) if not ctx.obj["plain"] else run_id)
+
+
+@simvue_run.command("remove")
+@click.pass_context
+@click.argument("run_id", type=str)
+@click.option("-i", "--interactive", help="Prompt for confirmation on removal", type=bool, default=False, is_flag=True)
+def delete_run(ctx, run_id: str, interactive: bool) -> None:
+    """Remove a run from the Simvue server"""
+    if not (simvue_cli.run.get_run(run_id)):
+        error_msg = f"Run '{run_id}' not found"
+        if ctx.obj["plain"]:
+            print(error_msg)
+        else:
+            click.secho(error_msg, fg="red", bold=True)
+        sys.exit(1)
+
+    if interactive:
+        remove = click.confirm(f"Remove run '{run_id}'?")
+        if not remove:
+            return
+
+    try:
+        simvue_cli.run.delete_run(run_id)
+    except ValueError as e:
+        click.echo(
+            click.style(e.args[0], fg="red", bold=True)
+            if not ctx.obj["plain"]
+            else e.args[0]
+        )
+        sys.exit(1)
+
+    response_message = f"Run '{run_id}' removed successfully."
+
+    if ctx.obj["plain"]:
+        print(response_message)
+    else:
+        click.secho(response_message, bold=True, fg="green")
 
 
 @simvue_run.command("close")

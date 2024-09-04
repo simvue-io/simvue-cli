@@ -209,6 +209,17 @@ def get_server_version() -> typing.Union[str, int]:
     return response.json().get("version")
 
 
+def user_info() -> dict:
+    simvue_instance = Simvue(name=None, uniq_id="", mode="online")
+    response = sv_api.get(
+        f"{simvue_instance._url}/api/whoami", headers=simvue_instance._headers
+    )
+    if response.status_code != 200:
+        return response.status_code
+
+    return response.json()
+
+
 def get_runs_list(**kwargs) -> None:
     """Retrieve list of Simvue runs"""
     client = Client()
@@ -220,6 +231,12 @@ def get_run(run_id: str) -> None:
     """Retrieve a Run from the Simvue server"""
     client = Client()
     return client.get_run(run_id)
+
+
+def delete_run(run_id: str) -> None:
+    """Delete a given run from the Simvue server"""
+    client = Client()
+    return client.delete_run(run_id)
 
 
 def get_alerts(**kwargs) -> None:
