@@ -79,7 +79,6 @@ def whoami(user: bool, tenant: bool) -> None:
         click.secho("cannot print 'only' with more than one choice")
         raise click.Abort
     user_info = simvue_cli.run.user_info()
-    print(user_info)
     user_name = user_info.get("username")
     tenant_info = user_info.get("tenant")
     if user:
@@ -460,6 +459,7 @@ def monitor(ctx, delimiter: str) -> None:
                 click.secho(e, fg="red", bold=True)
             sys.exit(1)
     click.echo(run_id)
+
 
 
 if __name__ in "__main__":

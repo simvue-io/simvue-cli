@@ -255,3 +255,4 @@ def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> Non
         "notification": "email" if email_notify else "none",
     }
     Simvue(name=None, uniq_id="undefined", mode="online").add_alert(alert_data)
+
