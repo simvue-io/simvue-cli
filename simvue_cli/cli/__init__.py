@@ -202,10 +202,14 @@ def create_run(
 
 @simvue_run.command("remove")
 @click.pass_context
-@click.argument("run_ids", type=str, nargs=-1)
+@click.argument("run_ids", type=str, nargs=-1, required=False)
 @click.option("-i", "--interactive", help="Prompt for confirmation on removal", type=bool, default=False, is_flag=True)
-def delete_run(ctx, run_ids: list[str], interactive: bool) -> None:
+def delete_run(ctx, run_ids: list[str] | None, interactive: bool) -> None:
     """Remove a run from the Simvue server"""
+    if not run_ids:
+        run_ids_str = input()
+        run_ids = run_ids_str.split(" ")
+
     for run_id in run_ids:
         if not (simvue_cli.run.get_run(run_id)):
             error_msg = f"Run '{run_id}' not found"

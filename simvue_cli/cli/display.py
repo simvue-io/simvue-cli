@@ -93,8 +93,10 @@ def create_runs_display(
     enumerate_: bool,
     format: str | None,
 ) -> str:
+    if plain_text:
+        return " ".join(run.get("id") for run in runs)
     table_headers = [
-        click.style(c, bold=True) if not plain_text else c
+        click.style(c, bold=True)
         for c in (("#", *columns) if enumerate_ else columns)
     ]
 
