@@ -461,6 +461,64 @@ def monitor(ctx, delimiter: str) -> None:
     click.echo(run_id)
 
 
+@simvue.group("folder")
+@click.pass_context
+def simvue_folder(ctx) -> None:
+    """Create or retrieve Simvue folders"""
+    pass
+
+
+@simvue_folder.command("list")
+@click.pass_context
+@click.option(
+    "--format",
+    type=click.Choice(list(tabulate._table_formats.keys())),
+    help="Display as table with output format",
+    default=None,
+)
+@click.option(
+    "--enumerate",
+    "enumerate_",
+    is_flag=True,
+    help="Show counter next to runs",
+    default=False,
+    show_default=True,
+)
+@click.option(
+    "--count",
+    type=int,
+    help="Maximum number of runs to retrieve",
+    default=20,
+    show_default=True,
+)
+@click.option("--tags", is_flag=True, help="Show tags")
+@click.option("--name", is_flag=True, help="Show names")
+@click.option("--description", is_flag=True, help="Show description")
+def folder_list(
+    ctx,
+    format: str,
+    enumerate_: bool,
+    count: int,
+    tags: bool,
+    name: bool,
+    description: bool,
+    **kwargs,
+) -> None:
+    """Retrieve folders list from Simvue server"""
+    kwargs |= {"filters": kwargs.get("filters" or [])}
+    runs = simvue_cli.run.get_folders_list(**kwargs)
+    columns = ["id"]
+
+    if name:
+        columns.append("name")
+    if tags:
+        columns.append("tags")
+    if description:
+        columns.append("description")
+
+    table = create_runs_display(columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=format)
+    click.echo(table)
+
 
 if __name__ in "__main__":
     simvue()

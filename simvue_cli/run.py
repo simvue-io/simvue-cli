@@ -227,6 +227,13 @@ def get_runs_list(**kwargs) -> None:
     return runs
 
 
+def get_folders_list(**kwargs) -> None:
+    """Retrieve list of Simvue runs"""
+    client = Client()
+    runs = client.get_folders(**kwargs)
+    return runs
+
+
 def get_run(run_id: str) -> None:
     """Retrieve a Run from the Simvue server"""
     client = Client()
