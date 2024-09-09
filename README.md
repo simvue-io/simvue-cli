@@ -4,6 +4,23 @@
 
 Simvue CLI is a command line interface for interacting with a Simvue server instance. The tool is designed to aid in performing more basic operations compared to the Simvue Python API which should be used instead for more complicated parsing of data and execution of simulations.
 
+* [Modifying Simvue configuration](#modifying-simvue-configuration)
+* [Retrieving and creating runs](#retrieving-and-creating-runs)
+  * [Listing runs](#listing-runs)
+    * [Adding output columns](#adding-output-columns)
+    * [Formatting the output](#formatting-the-output)
+    * [Display run info](#display-run-info)
+  * [Creating runs](#creating-runs)
+  * [Logging metrics and events](#logging-metrics-and-events)
+  * [Terminating runs](#terminating-runs)
+* [Retrieving folders](#retrieving-folders)
+* [Monitoring stdout](#monitoring-stdout)
+* [Creating user alerts](#creating-user-alerts)
+* [Clearing local files](#clearing-local-files)
+* [Version information](#version-information)
+* [Plain output](#plain-output)
+* [Checking server status](#checking-server-status)
+
 ## Modifying Simvue configuration
 
 You can use Simvue CLI to simplify modification of the Simvue configuration files, to set the server URL:
@@ -100,6 +117,20 @@ simvue run close <run-id>
 
 ```sh
 simvue run abort <run-id>
+```
+
+## Retrieving Folders
+
+Folders can be retrieved in a similar manner to runs.
+
+```sh
+simvue folder list
+```
+
+By default the output is not formatted, Simvue CLI makes use of the `tabulate` module to improve displaying of results, simply use the `--format` option to select from all possibilities, a full list is given under `--help`:
+
+```sh
+simvue folder list --format rounded_outline
 ```
 
 ## Monitoring stdout

@@ -4,6 +4,8 @@ Simvue CLI run
 
 Handles creation of and maintaining of runs between CLI calls
 """
+__author__ = "Kristian Zarebski"
+__date__ = "2024-09-09"
 
 import pathlib
 import uuid
@@ -26,6 +28,11 @@ CACHE_DIRECTORY = pathlib.Path().home().joinpath(".simvue", "cli_runs")
 
 
 def _check_run_exists(run_id: str) -> pathlib.Path:
+    """Check if the given run exists on the server
+
+    If the run is found to not exist then any local files representing it
+    are removed. The same applies if the run is no longer active.
+    """
     run_shelf_file = CACHE_DIRECTORY.joinpath(f"{run_id}.json")
     if not (run := Client().get_run(run_id)):
         if run_shelf_file.exists():
@@ -199,6 +206,16 @@ def update_metadata(run_id: str, metadata: dict[str, typing.Any], **kwargs) -> N
 
 
 def get_server_version() -> typing.Union[str, int]:
+    """Retrieve the version of the Simvue server running at the configured endpoint
+
+    If the version cannot be retrieved the response status is returned instead.
+
+    Returns
+    -------
+    str | int
+        either the version of the server as a string, or the status code of the
+        failed HTTP request
+    """
     simvue_instance = Simvue(name=None, uniq_id="", mode="online")
     response = sv_api.get(
         f"{simvue_instance._url}/api/version", headers=simvue_instance._headers
@@ -210,6 +227,13 @@ def get_server_version() -> typing.Union[str, int]:
 
 
 def user_info() -> dict:
+    """Retrieve information on the current Simvue user fromt he server
+
+    Returns
+    -------
+    dict
+        the JSON response from the 'whomai' request to the Simvue server
+    """
     simvue_instance = Simvue(name=None, uniq_id="", mode="online")
     response = sv_api.get(
         f"{simvue_instance._url}/api/whoami", headers=simvue_instance._headers
@@ -254,7 +278,17 @@ def get_alerts(**kwargs) -> None:
 
 
 def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> None:
-    """Create a User alert"""
+    """Create a User alert
+
+    Parameters
+    ----------
+    name : str
+        name to allocate this alert
+    trigger_abort : bool
+        whether triggering of this alert will terminate the relevant simulation
+    email_notify : bool
+        whether trigger of this alert will send an email to the creator
+    """
     alert_data = {
         "name": name,
         "source": "user",

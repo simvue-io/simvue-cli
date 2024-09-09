@@ -1,3 +1,11 @@
+"""
+Simvue CLI Display
+
+Contains functions to aid in the display of information.
+"""
+__author__ = "Kristian Zarebski"
+__date__ = "2024-09-09"
+
 from simvue.factory.proxy import typing
 import tabulate
 import click
@@ -46,6 +54,20 @@ CLICK_COLORS: dict[str, str] = {
 
 
 def format_status(status: str, plain_text: bool, *_, **__) -> str:
+    """Format Simvue server object status
+
+    Parameters
+    ----------
+    status : str
+        status to be formatted
+    plain_text : bool
+        whether to use color formatting
+
+    Returns
+    -------
+    str
+        either a click formatted string or original text
+    """
     if plain_text:
         return status
     return click.style(status, fg=STATUS_FORMAT[status], bold=True)
@@ -54,6 +76,25 @@ def format_status(status: str, plain_text: bool, *_, **__) -> str:
 def format_tags(
     tags: list[str], plain_text: bool, out_config: dict[str, dict[str, typing.Any]]
 ) -> str:
+    """Format Simvue server object tags
+
+    A configuration dictionary is used to define which color to use for each tag
+    and to ensure that same color is used whenever the given tag is present.
+
+    Parameters
+    ----------
+    tags : list[str]
+        list of tags to display
+    plain_text : bool
+        whether to use color formatting
+    out_config : dict[str, Any]
+        configuration defining color selection
+
+    Returns
+    -------
+    str
+        either a click formatted string or original text
+    """
     out_config["tags"] = out_config.get("tags") or {}
 
     if plain_text:
@@ -61,6 +102,8 @@ def format_tags(
 
     tag_out: list[str] = []
 
+    # Iterate through all tags selecting either the color for that
+    # tag (if already defined) or allocating one
     for tag in tags:
         if not (color := out_config["tags"].get(tag)):
             for click_color in CLICK_COLORS:
@@ -80,6 +123,7 @@ def format_tags(
     return ", ".join(tag_out)
 
 
+# Allocate functions to format each column type
 COLUMN_FORMAT: dict[str, typing.Callable[[str | list[str]], str]] = {
     "status": format_status,
     "tags": format_tags,
@@ -93,6 +137,32 @@ def create_runs_display(
     enumerate_: bool,
     format: str | None,
 ) -> str:
+    """Create display for Simvue runs
+
+    Creates either a plain BASH style argument list or a table of runs
+    with options for how the table is displayed.
+
+    Parameters
+    ----------
+    columns : list[str]
+        list of columns to display from the given data
+    runs : list[dict[str, Any]]
+        list of runs retrieved from the Simvue server
+    plain_text : bool
+        whether to use color formatting
+    enumerate : bool
+        whether to display a counter next to the runs
+    format : str | None
+        whether to display as a table or a single column list.
+        If a string, this will be the format used by the tabulate
+        module.
+
+    Returns
+    -------
+    str
+        either a click formatted string or original text
+    """
+
     if plain_text:
         return " ".join(run.get("id") for run in runs)
     table_headers = [
@@ -121,3 +191,4 @@ def create_runs_display(
         return "\n".join(runs_list)
 
     return tabulate.tabulate(contents, headers=table_headers, tablefmt=format).__str__()
+

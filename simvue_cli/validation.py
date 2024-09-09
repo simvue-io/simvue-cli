@@ -4,6 +4,9 @@ Simvue CLI Click Validators
 
 Custom types towards input validation
 """
+__author__ = "Kristian Zarebski"
+__date__ = "2024-09-09"
+
 import typing
 import re
 

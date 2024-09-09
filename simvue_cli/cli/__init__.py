@@ -5,6 +5,8 @@ Simvue CLI
 Command line tool for interfacing with a Simvue server, this interface allows
 the user to submit metrics and retrieve information from the command line.
 """
+__author__ = "Kristian Zarebski"
+__date__ = "2024-09-09"
 
 import pathlib
 import sys
@@ -43,6 +45,10 @@ click_log.basic_config(logger)
 )
 @click.pass_context
 def simvue(ctx, plain: bool) -> None:
+    """Simvue CLI for interacting with a Simvue server instance
+
+    Provides functionality for the retrieval, creation and modification of server objects
+    """
     ctx.ensure_object(dict)
     ctx.obj["plain"] = plain
 
