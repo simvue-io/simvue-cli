@@ -19,6 +19,7 @@ import simvue.api as sv_api
 from datetime import datetime, timezone
 
 from simvue.factory.proxy import Simvue
+from simvue.config import SimvueConfiguration
 
 from simvue.run import get_system
 from simvue.client import Client
@@ -53,7 +54,8 @@ def create_simvue_run(
     name: str | None,
     folder: str,
     timeout: int | None,
-) -> None:
+    retention: int | None,
+) -> str | None:
     """Create and initialise a new Simvue run
 
     Parameters
@@ -71,14 +73,22 @@ def create_simvue_run(
         folder path for this run
     timeout : int | None
         timout of run
+    retention : int | None
+        retention period in seconds
+
+    Returns
+    -------
+
+    str | None
+        Simvue run ID if successful else None
     """
     run_name, run_id = Simvue(
-        None, uniq_id=f"{uuid.uuid4()}", mode="online"
+        None, uniq_id=f"{uuid.uuid4()}", mode="online", config=SimvueConfiguration.fetch()
     ).create_run(
         data={
             "tags": tags or [],
             "status": "running" if running else "created",
-            "ttl": None,
+            "ttl": retention,
             "name": name,
             "description": description,
             "system": get_system(),
@@ -125,7 +135,7 @@ def log_metrics(run_id: str, metrics: dict[str, int | float]) -> None:
         }
     ]
 
-    Simvue(None, uniq_id=run_id, mode="online").send_metrics(
+    Simvue(None, uniq_id=run_id, mode="online", config=SimvueConfiguration.fetch()).send_metrics(
         msgpack.packb({"metrics": metrics_list, "run": run_id}, use_bin_type=True)
     )
 
@@ -155,7 +165,7 @@ def log_event(run_id: str, event_message: str) -> None:
         }
     ]
 
-    Simvue(None, uniq_id=run_id, mode="online").send_event(
+    Simvue(None, uniq_id=run_id, mode="online", config=SimvueConfiguration.fetch()).send_event(
         msgpack.packb({"events": events_list, "run": run_id}, use_bin_type=True)
     )
 
@@ -176,7 +186,7 @@ def set_run_status(run_id: str, status: str, **kwargs) -> None:
     """
     run_shelf_file = _check_run_exists(run_id)
 
-    Simvue(name=None, uniq_id=run_id, mode="online").update(
+    Simvue(name=None, uniq_id=run_id, mode="online", config=SimvueConfiguration.fetch()).update(
         data={"status": status} | kwargs
     )
 
@@ -200,7 +210,7 @@ def update_metadata(run_id: str, metadata: dict[str, typing.Any], **kwargs) -> N
     """
     _check_run_exists(run_id)
 
-    Simvue(name=None, uniq_id=run_id, mode="online").update(
+    Simvue(name=None, uniq_id=run_id, mode="online", config=SimvueConfiguration.fetch()).update(
         data={"metadata": metadata} | kwargs
     )
 
@@ -216,7 +226,7 @@ def get_server_version() -> typing.Union[str, int]:
         either the version of the server as a string, or the status code of the
         failed HTTP request
     """
-    simvue_instance = Simvue(name=None, uniq_id="", mode="online")
+    simvue_instance = Simvue(name=None, uniq_id="", mode="online", config=SimvueConfiguration.fetch())
     response = sv_api.get(
         f"{simvue_instance._url}/api/version", headers=simvue_instance._headers
     )
@@ -234,7 +244,7 @@ def user_info() -> dict:
     dict
         the JSON response from the 'whomai' request to the Simvue server
     """
-    simvue_instance = Simvue(name=None, uniq_id="", mode="online")
+    simvue_instance = Simvue(name=None, uniq_id="", mode="online", config=SimvueConfiguration.fetch())
     response = sv_api.get(
         f"{simvue_instance._url}/api/whoami", headers=simvue_instance._headers
     )
@@ -295,5 +305,5 @@ def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> Non
         "abort": trigger_abort,
         "notification": "email" if email_notify else "none",
     }
-    Simvue(name=None, uniq_id="undefined", mode="online").add_alert(alert_data)
+    Simvue(name=None, uniq_id="undefined", mode="online", config=SimvueConfiguration.fetch()).add_alert(alert_data)
 

@@ -12,6 +12,7 @@ import pathlib
 import sys
 import shutil
 import click
+import json
 import time
 import click_log
 import click_option_group
@@ -19,6 +20,8 @@ import datetime
 import logging
 import contextlib
 import importlib.metadata
+
+logging.getLogger("simvue").setLevel(logging.ERROR)
 
 from simvue.api import requests
 import tabulate
@@ -195,6 +198,12 @@ def simvue_run(ctx) -> None:
     default="/",
     show_default=True,
 )
+@click_option_group.optgroup.option(
+    "--retention",
+    type=int,
+    help="Specify retention period",
+    default=None,
+)
 def create_run(
     ctx, create_only: bool, tag: tuple[str, ...] | None, **run_params
 ) -> None:
@@ -289,7 +298,7 @@ def abort_run(ctx, run_id: str, reason: str) -> None:
         else:
             click.secho(error_msg, fg="red", bold=True)
         sys.exit(1)
-    simvue_cli.run.set_run_status(run_id, "aborted", reason=reason)
+    simvue_cli.run.set_run_status(run_id, "terminated", reason=reason)
 
 
 @simvue_run.command("log.metrics")
@@ -443,28 +452,63 @@ def create_alert(ctx, name: str, abort: bool=False, email: bool=False) -> None:
 
 
 @simvue.command("monitor")
+@click_option_group.optgroup.group(
+    "Run attributes",
+    help="Assign properties such as metadata and labelling to this run",
+)
+@click_option_group.optgroup.option(
+    "--name", type=SimvueName, help="Name to assign to this run", default=None
+)
+@click_option_group.optgroup.option(
+    "--description", type=str, help="Short run description", default=None
+)
+@click_option_group.optgroup.option(
+    "--tag", type=str, help="Tag this run with a label", default=None, multiple=True
+)
+@click_option_group.optgroup.option(
+    "--folder",
+    type=SimvueFolder,
+    help="Specify folder path for this run",
+    default="/",
+    show_default=True,
+)
+@click_option_group.optgroup.option(
+    "--retention",
+    type=int,
+    help="Specify retention period",
+    default=None,
+)
 @click.pass_context
-@click.option("--delimiter", "-d", help="File row delimiter", default=" ", show_default=True, type=str)
-def monitor(ctx, delimiter: str) -> None:
+@click.option("--delimiter", "-d", help="File row delimiter", default=None, show_default=True, type=str)
+def monitor(ctx, tag: tuple[str, ...] | None, delimiter: str, **run_params) -> None:
     """Monitor stdin for delimited lines sending as metrics"""
     metric_labels: list[str] = []
+    run_params |= {"tags": list(tag) if tag else None}
 
-    run_id: str = simvue_cli.run.create_simvue_run(**run_params)
+    run_id: str | None = simvue_cli.run.create_simvue_run(timeout=None, running=True, **run_params)
+
+    if not run_id:
+        raise click.Abort("Failed to created run")
     
-    for i, line in enumerate(sys.stdin):
-        line = [element.strip() for element in line.split(delimiter)]
-        if i == 0:
-            metric_labels = line
-            continue
-        try:
-            simvue_cli.run.log_metrics(run_id, dict(zip(metric_labels, line)))
-        except (RuntimeError, ValueError) as e:
-            if ctx.obj["plain"]:
-                click.echo(e)
-            else:
-                click.secho(e, fg="red", bold=True)
-            sys.exit(1)
-    click.echo(run_id)
+    try:
+        for i, line in enumerate(sys.stdin):
+            line = [el for element in line.split(delimiter) if (el := element.strip())]
+            if i == 0:
+                metric_labels = line
+                continue
+            try:
+                simvue_cli.run.log_metrics(run_id, dict(zip(metric_labels, [float(i) for i in line])))
+            except (RuntimeError, ValueError) as e:
+                if ctx.obj["plain"]:
+                    click.echo(e)
+                else:
+                    click.secho(e, fg="red", bold=True)
+                sys.exit(1)
+        click.echo(run_id)
+    except KeyboardInterrupt as e:
+        simvue_cli.run.set_run_status(run_id, "terminated")
+        raise click.Abort from e
+    simvue_cli.run.set_run_status(run_id, "completed")
 
 
 @simvue.group("folder")
@@ -478,6 +522,7 @@ def simvue_folder(ctx) -> None:
 @click.pass_context
 @click.option(
     "--format",
+    "table_format",
     type=click.Choice(list(tabulate._table_formats.keys())),
     help="Display as table with output format",
     default=None,
@@ -497,14 +542,15 @@ def simvue_folder(ctx) -> None:
     default=20,
     show_default=True,
 )
+@click.option("--path", is_flag=True, help="Show path")
 @click.option("--tags", is_flag=True, help="Show tags")
 @click.option("--name", is_flag=True, help="Show names")
 @click.option("--description", is_flag=True, help="Show description")
 def folder_list(
     ctx,
-    format: str,
+    table_format: str,
     enumerate_: bool,
-    count: int,
+    path: bool,
     tags: bool,
     name: bool,
     description: bool,
@@ -513,7 +559,12 @@ def folder_list(
     """Retrieve folders list from Simvue server"""
     kwargs |= {"filters": kwargs.get("filters" or [])}
     runs = simvue_cli.run.get_folders_list(**kwargs)
+    if not runs:
+        return
     columns = ["id"]
+
+    if path:
+        columns.append("path")
 
     if name:
         columns.append("name")
@@ -522,7 +573,7 @@ def folder_list(
     if description:
         columns.append("description")
 
-    table = create_runs_display(columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=format)
+    table = create_runs_display(columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=table_format)
     click.echo(table)
 
 

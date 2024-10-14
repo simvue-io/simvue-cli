@@ -8,9 +8,10 @@ __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
 import pathlib
-import configparser
+import toml
 
-SIMVUE_CONFIG_FILENAME: str = "simvue.ini"
+SIMVUE_CONFIG_FILENAME: str = "simvue.toml"
+SIMVUE_CONFIG_INI_FILENAME: str = "simvue.ini"
 
 
 def set_configuration_option(section: str, key: str, value: str | int | float, local: bool) -> pathlib.Path:
@@ -39,18 +40,13 @@ def set_configuration_option(section: str, key: str, value: str | int | float, l
     else:
         file_name = pathlib.Path().home().joinpath(f".{SIMVUE_CONFIG_FILENAME}")
 
-    config = configparser.ConfigParser()
+    config = toml.load(file_name) if file_name.exists() else {}
 
-    if file_name.exists():
-        config.read(file_name)
+    if not config.get(section):
+        config[section] = {}
 
-    if not config.has_section(section):
-        config.add_section(section)
+    config[section][key] = value
 
-    config.set(section, key, value)
-
-    with file_name.open("w") as config_out:
-        config.write(config_out)
+    toml.dump(config, file_name.open("w", encoding="utf-8"))
 
     return file_name
-

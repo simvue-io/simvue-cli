@@ -139,11 +139,11 @@ In the rare case where a program writes out only delimited data you can directly
 
 ```bash
 # Firstly echo headers
-echo "x\ty"
+echo -e "x\ty"
 
 # Now the data
 for i in {1..10}; do
-  echo "$i\t$((i * 2))"
+  echo -e "$i\t$((i * 2))"
   sleep 1
 done
 ```
