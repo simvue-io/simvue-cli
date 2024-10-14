@@ -80,7 +80,7 @@ simvue run json <run-id> | jq
 The `json` command is also designed to support piping, we can retrieve the latest run and query it:
 
 ```sh
-simvue run list --count 1 | simvue json | jq 
+simvue run list --count 1 | simvue run json | jq 
 ```
 
 ### Creating runs
