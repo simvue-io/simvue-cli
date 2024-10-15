@@ -57,13 +57,17 @@ def simvue(ctx, plain: bool) -> None:
 
 
 @simvue.command("ping")
-def ping_server() -> None:
+@click.option("-t", "--timeout", help="Timeout the command after n seconds", default=None, type=int)
+def ping_server(timeout: int | None) -> None:
     """Ping the Simvue server"""
     successful_pings: int = 0
     with contextlib.suppress(KeyboardInterrupt):
-        url = simvue_client.Client()._url
+        url = simvue_client.Client()._config.server.url
         ip_address = simvue_cli.server.get_ip_of_url(url)
+        counter: int = 0
         while True:
+            if timeout and counter > timeout:
+                return
             start_time = time.time()
             try:
                 server_version: int | str = simvue_cli.run.get_server_version()
@@ -77,6 +81,7 @@ def ping_server() -> None:
                 click.secho(f"Reply from {url} ({ip_address}): status_code={status_code}, error")
 
             time.sleep(1)
+            counter += 1
 
 
 @simvue.command("whoami")
@@ -103,28 +108,24 @@ def whoami(user: bool, tenant: bool) -> None:
 @click.pass_context
 def about_simvue(ctx) -> None:
     """Display full information on Simvue instance"""
-    click.echo(
-        SIMVUE_LOGO
-    )
     width = shutil.get_terminal_size().columns
+    click.echo(
+        "\n".join(f"{'\t' * int(0.015 * width)}{r}" for r in SIMVUE_LOGO.split("\n"))
+    )
     click.echo(f"\n{width * '='}\n")
     click.echo(f"\n{'\t' * int(0.04 * width)} Provided under the Apache-2.0 License")
     click.echo(f"{'\t' * int(0.04 * width)}© Copyright {datetime.datetime.today().strftime('%Y')} Simvue Development Team\n")
+    out_table: list[list[str]] = []
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
-        click.echo(
-            f"{'\t' * int(0.04 * width)}CLI Version:\t{importlib.metadata.version(simvue_cli.__name__)}"
-        )
+        out_table.append(["CLI Version: ", importlib.metadata.version(simvue_cli.__name__)])
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
-        click.echo(
-            f"{'\t' * int(0.04 * width)}Python API Version:\t{importlib.metadata.version(simvue_client.__name__)}"
-        )
+        out_table.append(["Python API Version: ", importlib.metadata.version(simvue_client.__name__)])
     with contextlib.suppress(Exception):
         server_version: int | str = simvue_cli.run.get_server_version()
         if isinstance(server_version, int):
             raise RuntimeError
-        click.echo(
-            f"{'\t' * int(0.04 * width)}Server Version:\t{server_version}"
-        )
+        out_table.append(["Server Version: ", server_version])
+    click.echo("\n".join(f"{'\t' * int(0.045 * width)}{r}" for r in tabulate.tabulate(out_table, tablefmt="plain").__str__().split("\n")))
     click.echo(f"\n{width * '='}\n")
 
 
@@ -445,10 +446,9 @@ def simvue_alert(ctx) -> None:
 @click.option("--email", is_flag=True, help="Notify by email if triggered", show_default=True)
 def create_alert(ctx, name: str, abort: bool=False, email: bool=False) -> None:
     """Create a User alert"""
-    simvue_cli.run.create_user_alert(name, abort, email)
-    click.echo(
-        f"Created alert '{name}'"
-    )
+    result = simvue_cli.run.create_user_alert(name, abort, email)
+    alert_id = result["id"]
+    click.echo(click.style(alert_id) if not ctx.obj["plain"] else alert_id)
 
 
 @simvue.command("monitor")

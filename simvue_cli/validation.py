@@ -35,8 +35,10 @@ class JSONParamType(click.ParamType):
     def convert(self, value: str, param: Parameter | None, ctx: Context | None) -> dict:
         try:
             return json.loads(value)
-        except json.JSONDecodeError:
-            self.fail(f"Failed to load '{value}', invalid JSON string")
+        except json.JSONDecodeError as e:
+            self.fail(f"Failed to load '{value}', invalid JSON string: {e}")
+        except Exception as e:
+            self.fail(f"{e}")
 
 
 SimvueFolder = PatternMatch(FOLDER_REGEX)

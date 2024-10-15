@@ -44,6 +44,19 @@ def _check_run_exists(run_id: str) -> pathlib.Path:
         if run_shelf_file.exists():
             run_shelf_file.unlink()
         raise ValueError(f"Run '{run_id}' status is '{status}'.")
+
+    # If the run was created by other means, need to make a local cache file
+    # retrieve last time step, and the start time of the run
+    if not run_shelf_file.exists():
+        metrics = run["metrics"]
+        out_data = {"step": 0, "start_time": time.time()}
+        if metrics and (step := max(metric.get("step") for metric in metrics)):
+            out_data["step"] = step
+        if metrics and (time_now := min(metric.get("time") for metric in metrics)):
+            out_data["start_time"] = time_now
+        with run_shelf_file.open("w") as out_f:
+            json.dump(out_data, out_f)
+
     return run_shelf_file
 
 
@@ -228,7 +241,7 @@ def get_server_version() -> typing.Union[str, int]:
     """
     simvue_instance = Simvue(name=None, uniq_id="", mode="online", config=SimvueConfiguration.fetch())
     response = sv_api.get(
-        f"{simvue_instance._url}/api/version", headers=simvue_instance._headers
+        f"{simvue_instance._config.server.url}/api/version", headers=simvue_instance._headers
     )
     if response.status_code != 200:
         return response.status_code
@@ -246,7 +259,7 @@ def user_info() -> dict:
     """
     simvue_instance = Simvue(name=None, uniq_id="", mode="online", config=SimvueConfiguration.fetch())
     response = sv_api.get(
-        f"{simvue_instance._url}/api/whoami", headers=simvue_instance._headers
+        f"{simvue_instance._config.server.url}/api/whoami", headers=simvue_instance._headers
     )
     if response.status_code != 200:
         return response.status_code
@@ -287,7 +300,7 @@ def get_alerts(**kwargs) -> None:
     client.get_alerts()
 
 
-def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> None:
+def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> dict | None:
     """Create a User alert
 
     Parameters
@@ -298,6 +311,11 @@ def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> Non
         whether triggering of this alert will terminate the relevant simulation
     email_notify : bool
         whether trigger of this alert will send an email to the creator
+
+    Returns
+    -------
+    dict | None
+        server response on alert creation
     """
     alert_data = {
         "name": name,
@@ -305,5 +323,5 @@ def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> Non
         "abort": trigger_abort,
         "notification": "email" if email_notify else "none",
     }
-    Simvue(name=None, uniq_id="undefined", mode="online", config=SimvueConfiguration.fetch()).add_alert(alert_data)
+    return Simvue(name=None, uniq_id="undefined", mode="online", config=SimvueConfiguration.fetch()).add_alert(alert_data)
 
