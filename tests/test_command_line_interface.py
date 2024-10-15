@@ -74,6 +74,7 @@ def test_runs_json(create_test_run: tuple[simvue.Run, dict]) -> None:
     )
     assert result.exit_code == 0, result.output
     json_data = json.loads(result.output)
+    assert isinstance(json_data, dict), f"Expected dictionary got '{result.output}'"
     assert json_data.get("tags") == run_data["tags"]
 
 
