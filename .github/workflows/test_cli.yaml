@@ -1,8 +1,22 @@
-name: Simvue-CLI
-on: ["push"]
+name: Simvue-CLI (Ubuntu)
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main", "dev"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test_build:
     name: Test CLI
+    timeout-minutes: 20
     runs-on: ["ubuntu-latest"]
     steps:
       - name: Retrieve Code
