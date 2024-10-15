@@ -35,7 +35,7 @@ def _check_run_exists(run_id: str) -> pathlib.Path:
     are removed. The same applies if the run is no longer active.
     """
     run_shelf_file = CACHE_DIRECTORY.joinpath(f"{run_id}.json")
-    if not (run := Client().get_run(run_id)):
+    if not (run := Client().get_run(run_id)) or not isinstance(run, dict):
         if run_shelf_file.exists():
             run_shelf_file.unlink()
         raise ValueError(f"Run '{run_id}' does not exist.")
