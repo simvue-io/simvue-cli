@@ -1,0 +1,22 @@
+name: Simvue-CLI
+on: ["push"]
+jobs:
+  test_build:
+    name: Test CLI
+    runs-on: ["ubuntu-latest"]
+    steps:
+      - name: Retrieve Code
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Run Tests
+        run: |
+          export SIMVUE_URL=${{ secrets.SIMVUE_URL }}
+          export SIMVUE_TOKEN=${{ secrets.SIMVUE_TOKEN }}
+          poetry install
+          poetry run pytest -x --cov=simvue_cli --cov-report=term
+
