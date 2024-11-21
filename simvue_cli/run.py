@@ -19,7 +19,7 @@ import simvue.api as sv_api
 from datetime import datetime, timezone
 
 from simvue.factory.proxy import Simvue
-from simvue.config import SimvueConfiguration
+from simvue.config.user import SimvueConfiguration
 
 from simvue.run import get_system
 from simvue.client import Client
@@ -49,6 +49,9 @@ def _check_run_exists(run_id: str) -> pathlib.Path:
     # retrieve last time step, and the start time of the run
     if not run_shelf_file.exists():
         metrics = run["metrics"]
+
+        if not isinstance(metrics, dict):
+            raise RuntimeError(f"Expected metrics to be of type 'dict', but got '{metrics}'")
         out_data = {"step": 0, "start_time": time.time()}
         if metrics and (step := max(metric.get("step") for metric in metrics)):
             out_data["step"] = step

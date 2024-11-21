@@ -57,7 +57,7 @@ def test_runs_list(create_plain_run: tuple[simvue.Run, dict], tab_format: str) -
         ]
     )
     assert result.exit_code == 0, result.output
-    assert run.id and run.id in result.output
+    assert run.id and run.id in result.output.replace("\\\\", "\\")
 
 
 def test_runs_json(create_test_run: tuple[simvue.Run, dict]) -> None:

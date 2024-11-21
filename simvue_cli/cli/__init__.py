@@ -344,6 +344,7 @@ def update_metadata(run_id: str, metadata: dict) -> None:
 )
 @click.option(
     "--count",
+    "count_limit",
     type=int,
     help="Maximum number of runs to retrieve",
     default=20,
