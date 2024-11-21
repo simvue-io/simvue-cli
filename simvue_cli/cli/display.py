@@ -173,7 +173,7 @@ def create_runs_display(
     contents: list[list[str]] = []
     out_config: dict[str, dict[str, typing.Any]] = {}
 
-    for i, run in enumerate(runs):
+    for i, run in enumerate(sorted(runs, key=lambda x: x["created"], reverse=True)):
         row: list[str] = []
         if enumerate_:
             row.append(str(i))

@@ -353,6 +353,7 @@ def update_metadata(run_id: str, metadata: dict) -> None:
 @click.option("--tags", is_flag=True, help="Show tags")
 @click.option("--name", is_flag=True, help="Show names")
 @click.option("--user", is_flag=True, help="Show users")
+@click.option("--created", is_flag=True, help="Show created timestamp")
 @click.option("--description", is_flag=True, help="Show description")
 @click.option("--status", is_flag=True, help="Show status")
 @click.option("--folder", is_flag=True, help="Show folder")
@@ -362,6 +363,7 @@ def list_runs(
     tags: bool,
     description: bool,
     user: bool,
+    created: bool,
     enumerate_: bool,
     name: bool,
     folder: bool,
@@ -373,6 +375,8 @@ def list_runs(
     runs = simvue_cli.run.get_runs_list(**kwargs)
     columns = ["id"]
 
+    if created:
+        columns.append("created")
     if name:
         columns.append("name")
     if folder:
