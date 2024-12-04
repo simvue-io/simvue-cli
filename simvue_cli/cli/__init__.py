@@ -28,10 +28,10 @@ import tabulate
 import simvue as simvue_client
 
 import simvue_cli.config
-import simvue_cli.run
+import simvue_cli.actions
 import simvue_cli.server
 
-from simvue_cli.cli.display import create_runs_display, SIMVUE_LOGO
+from simvue_cli.cli.display import create_objects_display, SIMVUE_LOGO
 from simvue_cli.validation import SimvueName, SimvueFolder, JSONType
 
 from click_params import PUBLIC_URL
@@ -70,7 +70,7 @@ def ping_server(timeout: int | None) -> None:
                 return
             start_time = time.time()
             try:
-                server_version: int | str = simvue_cli.run.get_server_version()
+                server_version: int | str = simvue_cli.actions.get_server_version()
                 if (status_code := 200 if isinstance(server_version, str) else server_version) != 200:
                     raise RuntimeError
                 successful_pings += 1
@@ -92,7 +92,7 @@ def whoami(user: bool, tenant: bool) -> None:
     if user and tenant:
         click.secho("cannot print 'only' with more than one choice")
         raise click.Abort
-    user_info = simvue_cli.run.user_info()
+    user_info = simvue_cli.actions.user_info()
     user_name = user_info.get("username")
     tenant_info = user_info.get("tenant")
     if user:
@@ -114,14 +114,16 @@ def about_simvue(ctx) -> None:
     )
     click.echo(f"\n{width * '='}\n")
     click.echo(f"\n{'\t' * int(0.04 * width)} Provided under the Apache-2.0 License")
-    click.echo(f"{'\t' * int(0.04 * width)}© Copyright {datetime.datetime.today().strftime('%Y')} Simvue Development Team\n")
+    click.echo(
+        f"{'\t' * int(0.04 * width)}© Copyright {datetime.datetime.now().strftime('%Y')} Simvue Development Team\n"
+    )
     out_table: list[list[str]] = []
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
         out_table.append(["CLI Version: ", importlib.metadata.version(simvue_cli.__name__)])
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
         out_table.append(["Python API Version: ", importlib.metadata.version(simvue_client.__name__)])
     with contextlib.suppress(Exception):
-        server_version: int | str = simvue_cli.run.get_server_version()
+        server_version: int | str = simvue_cli.actions.get_server_version()
         if isinstance(server_version, int):
             raise RuntimeError
         out_table.append(["Server Version: ", server_version])
@@ -210,9 +212,9 @@ def create_run(
 ) -> None:
     """Initialise a new Simvue run"""
     run_params |= {"running": not create_only, "tags": list(tag) if tag else None}
-    run_id: str = simvue_cli.run.create_simvue_run(**run_params)
+    run_id: str = simvue_cli.actions.create_simvue_run(**run_params)
 
-    click.echo(click.style(run_id) if not ctx.obj["plain"] else run_id)
+    click.echo(run_id if ctx.obj["plain"] else click.style(run_id))
 
 
 @simvue_run.command("remove")
@@ -226,7 +228,7 @@ def delete_run(ctx, run_ids: list[str] | None, interactive: bool) -> None:
         run_ids = run_ids_str.split(" ")
 
     for run_id in run_ids:
-        if not (simvue_cli.run.get_run(run_id)):
+        if not (simvue_cli.actions.get_run(run_id)):
             error_msg = f"Run '{run_id}' not found"
             if ctx.obj["plain"]:
                 print(error_msg)
@@ -240,12 +242,10 @@ def delete_run(ctx, run_ids: list[str] | None, interactive: bool) -> None:
                 continue
 
         try:
-            simvue_cli.run.delete_run(run_id)
+            simvue_cli.actions.delete_run(run_id)
         except ValueError as e:
             click.echo(
-                click.style(e.args[0], fg="red", bold=True)
-                if not ctx.obj["plain"]
-                else e.args[0]
+                e.args[0] if ctx.obj["plain"] else click.style(e.args[0], fg="red", bold=True)
             )
             sys.exit(1)
 
@@ -262,7 +262,7 @@ def delete_run(ctx, run_ids: list[str] | None, interactive: bool) -> None:
 @click.argument("run_id", type=str)
 def close_run(ctx, run_id: str) -> None:
     """Mark an active run as completed"""
-    if not (simvue_cli.run.get_run(run_id)):
+    if not (simvue_cli.actions.get_run(run_id)):
         error_msg = f"Run '{run_id}' not found"
         if ctx.obj["plain"]:
             print(error_msg)
@@ -270,12 +270,10 @@ def close_run(ctx, run_id: str) -> None:
             click.secho(error_msg, fg="red", bold=True)
         sys.exit(1)
     try:
-        simvue_cli.run.set_run_status(run_id, "completed")
+        simvue_cli.actions.set_run_status(run_id, "completed")
     except ValueError as e:
         click.echo(
-            click.style(e.args[0], fg="red", bold=True)
-            if not ctx.obj["plain"]
-            else e.args[0]
+            e.args[0] if ctx.obj["plain"] else click.style(e.args[0], fg="red", bold=True)
         )
         sys.exit(1)
 
@@ -292,14 +290,14 @@ def close_run(ctx, run_id: str) -> None:
 )
 def abort_run(ctx, run_id: str, reason: str) -> None:
     """Abort an active run"""
-    if not (simvue_cli.run.get_run(run_id)):
+    if not (simvue_cli.actions.get_run(run_id)):
         error_msg = f"Run '{run_id}' not found"
         if ctx.obj["plain"]:
             print(error_msg)
         else:
             click.secho(error_msg, fg="red", bold=True)
         sys.exit(1)
-    simvue_cli.run.set_run_status(run_id, "terminated", reason=reason)
+    simvue_cli.actions.set_run_status(run_id, "terminated", reason=reason)
 
 
 @simvue_run.command("log.metrics")
@@ -307,7 +305,7 @@ def abort_run(ctx, run_id: str, reason: str) -> None:
 @click.argument("metrics", type=JSONType)
 def log_metrics(run_id: str, metrics: dict) -> None:
     """Log metrics to Simvue server"""
-    simvue_cli.run.log_metrics(run_id, metrics)
+    simvue_cli.actions.log_metrics(run_id, metrics)
 
 
 @simvue_run.command("log.event")
@@ -315,7 +313,7 @@ def log_metrics(run_id: str, metrics: dict) -> None:
 @click.argument("event_message", type=str)
 def log_event(run_id: str, event_message: str) -> None:
     """Log event to Simvue server"""
-    simvue_cli.run.log_event(run_id, event_message)
+    simvue_cli.actions.log_event(run_id, event_message)
 
 
 @simvue_run.command("metadata")
@@ -323,7 +321,7 @@ def log_event(run_id: str, event_message: str) -> None:
 @click.argument("metadata", type=JSONType)
 def update_metadata(run_id: str, metadata: dict) -> None:
     """Update metadata for a run on the Simvue server"""
-    simvue_cli.run.update_metadata(run_id, metadata)
+    simvue_cli.actions.update_metadata(run_id, metadata)
 
 
 @simvue_run.command("list")
@@ -372,7 +370,7 @@ def list_runs(
 ) -> None:
     """Retrieve runs list from Simvue server"""
     kwargs |= {"filters": kwargs.get("filters" or [])}
-    runs = simvue_cli.run.get_runs_list(**kwargs)
+    runs = simvue_cli.actions.get_runs_list(**kwargs)
     columns = ["id"]
 
     if created:
@@ -390,7 +388,7 @@ def list_runs(
     if status:
         columns.append("status")
 
-    table = create_runs_display(columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=format)
+    table = create_objects_display(columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=format)
     click.echo(table)
 
 
@@ -405,7 +403,7 @@ def get_run_json(run_id: str) -> None:
         run_id = input()
 
     try:
-        run_info = simvue_cli.run.get_run(run_id)
+        run_info = simvue_cli.actions.get_run(run_id)
     except RuntimeError as e:
         error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
@@ -451,9 +449,9 @@ def simvue_alert(ctx) -> None:
 @click.option("--email", is_flag=True, help="Notify by email if triggered", show_default=True)
 def create_alert(ctx, name: str, abort: bool=False, email: bool=False) -> None:
     """Create a User alert"""
-    result = simvue_cli.run.create_user_alert(name, abort, email)
+    result = simvue_cli.actions.create_user_alert(name, abort, email)
     alert_id = result["id"]
-    click.echo(click.style(alert_id) if not ctx.obj["plain"] else alert_id)
+    click.echo(alert_id if ctx.obj["plain"] else click.style(alert_id))
 
 
 @simvue.command("monitor")
@@ -490,7 +488,7 @@ def monitor(ctx, tag: tuple[str, ...] | None, delimiter: str, **run_params) -> N
     metric_labels: list[str] = []
     run_params |= {"tags": list(tag) if tag else None}
 
-    run_id: str | None = simvue_cli.run.create_simvue_run(timeout=None, running=True, **run_params)
+    run_id: str | None = simvue_cli.actions.create_simvue_run(timeout=None, running=True, **run_params)
 
     if not run_id:
         raise click.Abort("Failed to created run")
@@ -502,7 +500,7 @@ def monitor(ctx, tag: tuple[str, ...] | None, delimiter: str, **run_params) -> N
                 metric_labels = line
                 continue
             try:
-                simvue_cli.run.log_metrics(run_id, dict(zip(metric_labels, [float(i) for i in line])))
+                simvue_cli.actions.log_metrics(run_id, dict(zip(metric_labels, [float(i) for i in line])))
             except (RuntimeError, ValueError) as e:
                 if ctx.obj["plain"]:
                     click.echo(e)
@@ -511,9 +509,9 @@ def monitor(ctx, tag: tuple[str, ...] | None, delimiter: str, **run_params) -> N
                 sys.exit(1)
         click.echo(run_id)
     except KeyboardInterrupt as e:
-        simvue_cli.run.set_run_status(run_id, "terminated")
+        simvue_cli.actions.set_run_status(run_id, "terminated")
         raise click.Abort from e
-    simvue_cli.run.set_run_status(run_id, "completed")
+    simvue_cli.actions.set_run_status(run_id, "completed")
 
 
 @simvue.group("folder")
@@ -563,7 +561,7 @@ def folder_list(
 ) -> None:
     """Retrieve folders list from Simvue server"""
     kwargs |= {"filters": kwargs.get("filters" or [])}
-    runs = simvue_cli.run.get_folders_list(**kwargs)
+    runs = simvue_cli.actions.get_folders_list(**kwargs)
     if not runs:
         return
     columns = ["id"]
@@ -578,9 +576,60 @@ def folder_list(
     if description:
         columns.append("description")
 
-    table = create_runs_display(columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=table_format)
+    table = create_objects_display(columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=table_format)
+    click.echo(table)
+
+
+@simvue.group("tag")
+@click.pass_context
+def simvue_tag(ctx) -> None:
+    """Create or retrieve Simvue runs"""
+    pass
+
+
+@simvue_tag.command("list")
+@click.pass_context
+@click.option(
+    "--format",
+    "table_format",
+    type=click.Choice(list(tabulate._table_formats.keys())),
+    help="Display as table with output format",
+    default=None,
+)
+@click.option(
+    "--enumerate",
+    "enumerate_",
+    is_flag=True,
+    help="Show counter next to runs",
+    default=False,
+    show_default=True,
+)
+@click.option(
+    "--count",
+    type=int,
+    help="Maximum number of runs to retrieve",
+    default=20,
+    show_default=True,
+)
+@click.option("--name", is_flag=True, help="Show names")
+@click.option("--color", is_flag=True, help="Show hex colors")
+def tag_list(ctx, count: int, enumerate_: bool, table_format: str | None, name: bool, color: bool, **kwargs) -> None:
+    tags = simvue_cli.actions.get_tag_list(**kwargs)
+    if not tags:
+        return
+    columns = ["id"]
+
+    if name:
+        columns.append("name")
+
+    if color:
+        columns.append("colour")
+
+
+    table = create_objects_display(columns, tags, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=table_format)
     click.echo(table)
 
 
 if __name__ in "__main__":
     simvue()
+

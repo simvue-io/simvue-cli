@@ -130,7 +130,7 @@ COLUMN_FORMAT: dict[str, typing.Callable[[str | list[str]], str]] = {
 }
 
 
-def create_runs_display(
+def create_objects_display(
     columns: list[str],
     runs: list[dict[str, typing.Any]],
     plain_text: bool,

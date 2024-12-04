@@ -1,8 +1,8 @@
 """
-Simvue CLI run
-==============
+Simvue CLI Actions
+==================
 
-Handles creation of and maintaining of runs between CLI calls
+Contains callbacks for CLI commands
 """
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
@@ -206,7 +206,7 @@ def set_run_status(run_id: str, status: str, **kwargs) -> None:
         data={"status": status} | kwargs
     )
 
-    if status in ("completed", "lost", "failed", "terminated"):
+    if status in {"completed", "lost", "failed", "terminated"}:
         run_shelf_file.unlink()
 
 
@@ -264,24 +264,25 @@ def user_info() -> dict:
     response = sv_api.get(
         f"{simvue_instance._config.server.url}/api/whoami", headers=simvue_instance._headers
     )
-    if response.status_code != 200:
-        return response.status_code
-
-    return response.json()
+    return response.status_code if response.status_code != 200 else response.json()
 
 
 def get_runs_list(**kwargs) -> None:
     """Retrieve list of Simvue runs"""
     client = Client()
-    runs = client.get_runs(**kwargs)
-    return runs
+    return client.get_runs(**kwargs)
+
+
+def get_tag_list(**kwargs) -> None:
+    """Retrieve list of Simvue tags"""
+    client = Client()
+    return client.get_tags(**kwargs)
 
 
 def get_folders_list(**kwargs) -> None:
     """Retrieve list of Simvue runs"""
     client = Client()
-    runs = client.get_folders(**kwargs)
-    return runs
+    return client.get_folders(**kwargs)
 
 
 def get_run(run_id: str) -> None:
