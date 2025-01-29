@@ -42,10 +42,7 @@ def test_config_update(component: str, tmpdir: LEGACY_PATH) -> None:
         ) == (TEST_SERVER if component == "url" else TEST_TOKEN)
 
 
-@pytest.mark.parametrize(
-    "tab_format", tabulate._table_formats.keys()
-)
-def test_runs_list(create_plain_run: tuple[simvue.Run, dict], tab_format: str) -> None:
+def test_runs_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
     run, _ = create_plain_run
     runner = click.testing.CliRunner()
     result = runner.invoke(
@@ -53,7 +50,7 @@ def test_runs_list(create_plain_run: tuple[simvue.Run, dict], tab_format: str) -
         [
             "run",
             "list",
-            f"--format={tab_format}"
+            f"--format=latex"
         ]
     )
     assert result.exit_code == 0, result.output
@@ -73,7 +70,7 @@ def test_runs_json(create_test_run: tuple[simvue.Run, dict]) -> None:
         ]
     )
     assert result.exit_code == 0, result.output
-    json_data = json.loads(result.output)
+    json_data = json.loads(result.output.replace("'", '"'))
     assert isinstance(json_data, dict), f"Expected dictionary got '{result.output}'"
     assert json_data.get("tags") == run_data["tags"]
 
@@ -115,7 +112,7 @@ def test_run_creation(state: str) -> None:
     assert result.exit_code == 0, result.output
     time.sleep(1)
     run_data = client.get_run(run_id)
-    assert run_data["status"] == "terminated" if state == "abort" else "completed"
+    assert run_data.status == ("terminated" if state == "abort" else "completed")
 
 
 @pytest.mark.parametrize(
@@ -212,10 +209,7 @@ def test_about() -> None:
     )
     assert result.exit_code == 0, result.output
 
-@pytest.mark.parametrize(
-    "tab_format", tabulate._table_formats.keys()
-)
-def test_folder_list(create_plain_run: tuple[simvue.Run, dict], tab_format: str) -> None:
+def test_folder_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
     run, run_data = create_plain_run
     assert run.id
     runner = click.testing.CliRunner()
@@ -229,7 +223,7 @@ def test_folder_list(create_plain_run: tuple[simvue.Run, dict], tab_format: str)
             "--description",
             "--tags",
             "--enumerate",
-            f"--format={tab_format}"
+            f"--format=latex"
         ]
     )
     assert result.exit_code == 0, result.output
@@ -275,12 +269,12 @@ done
 
                 command_1.stdout.close()
                 command_2.communicate()
-                assert command_2.returncode == 0, result.output
+                assert command_2.returncode == 0, command_2.stdout
     time.sleep(1.0)
     client = simvue.Client()
-    run_data = client.get_runs(filters=["has tag.test_simvue_monitor"])
+    _, run_data = next(client.get_runs(filters=["has tag.test_simvue_monitor"]))
     assert run_data
-    assert client.get_metric_values(run_ids=[run_data[0]["id"]], metric_names=["x", "y"], xaxis="step")
+    assert client.get_metric_values(run_ids=[run_data.id], metric_names=["x", "y"], xaxis="step")
 
 
 

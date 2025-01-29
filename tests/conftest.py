@@ -53,7 +53,7 @@ def setup_test_run(run: sv_run.Run, create_objects: bool, request: pytest.Fixtur
             run.log_event(f"{TEST_DATA['event_contains']} {i}")
 
         for i in range(5):
-            run.create_alert(name=f"alert_{i}", source="events", frequency=1, pattern=TEST_DATA['event_contains'])
+            run.create_event_alert(name=f"alert_{i}", frequency=1, pattern=TEST_DATA['event_contains'])
 
         for i in range(5):
             run.log_metrics({"metric_counter": i, "metric_val": i*i - 1})
@@ -64,7 +64,7 @@ def setup_test_run(run: sv_run.Run, create_objects: bool, request: pytest.Fixtur
         TEST_DATA["metrics"] = ("metric_counter", "metric_val")
     TEST_DATA["run_id"] = run._id
     TEST_DATA["run_name"] = run._name
-    TEST_DATA["url"] = run._config.server.url
+    TEST_DATA["url"] = run._user_config.server.url
     TEST_DATA["headers"] = run._headers
     TEST_DATA["pid"] = run._pid
     TEST_DATA["resources_metrics_interval"] = run._resources_metrics_interval

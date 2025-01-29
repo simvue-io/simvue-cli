@@ -7,6 +7,7 @@ __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
 from simvue.factory.proxy import typing
+from simvue.api.objects.base import SimvueObject
 import tabulate
 import click
 
@@ -132,7 +133,7 @@ COLUMN_FORMAT: dict[str, typing.Callable[[str | list[str]], str]] = {
 
 def create_objects_display(
     columns: list[str],
-    runs: list[dict[str, typing.Any]],
+    objects: typing.Generator[tuple[str, SimvueObject]],
     plain_text: bool,
     enumerate_: bool,
     format: str | None,
@@ -146,8 +147,8 @@ def create_objects_display(
     ----------
     columns : list[str]
         list of columns to display from the given data
-    runs : list[dict[str, Any]]
-        list of runs retrieved from the Simvue server
+    objects: Generator[tuple[str, SimvueObject]]
+        list of objects retrieved from the Simvue server
     plain_text : bool
         whether to use color formatting
     enumerate : bool
@@ -164,7 +165,7 @@ def create_objects_display(
     """
 
     if plain_text:
-        return " ".join(run.get("id") for run in runs)
+        return " ".join(obj.id for _, obj in objects)
     table_headers = [
         click.style(c, bold=True)
         for c in (("#", *columns) if enumerate_ else columns)
@@ -173,22 +174,28 @@ def create_objects_display(
     contents: list[list[str]] = []
     out_config: dict[str, dict[str, typing.Any]] = {}
 
-    for i, run in enumerate(sorted(runs, key=lambda x: x["created"], reverse=True)):
+    for i, (_, obj) in enumerate(
+        sorted(
+            objects,
+            key=lambda x: getattr(x[1], "created", x[1].id),
+            reverse=True
+        )
+    ):
         row: list[str] = []
         if enumerate_:
             row.append(str(i))
 
         for column in columns:
-            value = run.get(column, "N/A")
+            value = getattr(obj, column, "N/A")
             if formatter := COLUMN_FORMAT.get(column):
                 row.append(formatter(value, plain_text, out_config))
             else:
-                row.append(value)
+                row.append(str(value))
         contents.append(row)
 
     if not format:
-        runs_list: list[str] = ["\t".join(c) for c in contents]
-        return "\n".join(runs_list)
+        objs_list: list[str] = ["\t".join(c) for c in contents]
+        return "\n".join(objs_list)
 
     return tabulate.tabulate(contents, headers=table_headers, tablefmt=format).__str__()
 

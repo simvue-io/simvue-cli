@@ -4,43 +4,46 @@ Simvue CLI Actions
 
 Contains callbacks for CLI commands
 """
+
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
 import pathlib
-import uuid
 import json
 import typing
-import msgpack
 import time
 
 import simvue.api as sv_api
 
 from datetime import datetime, timezone
 
-from simvue.factory.proxy import Simvue
-from simvue.config.user import SimvueConfiguration
-
 from simvue.run import get_system
-from simvue.client import Client
+from simvue.api.objects.alert.base import AlertBase
+from simvue.api.objects import Alert, Run, Tag, Folder, UserAlert, Metrics
+from simvue.api.objects.administrator import User, Tenant
+
+from .config import get_url_and_headers
 
 # Local directory to hold run information
 CACHE_DIRECTORY = pathlib.Path().home().joinpath(".simvue", "cli_runs")
 
 
-def _check_run_exists(run_id: str) -> pathlib.Path:
+def _check_run_exists(run_id: str) -> tuple[pathlib.Path, Run]:
     """Check if the given run exists on the server
 
     If the run is found to not exist then any local files representing it
     are removed. The same applies if the run is no longer active.
     """
     run_shelf_file = CACHE_DIRECTORY.joinpath(f"{run_id}.json")
-    if not (run := Client().get_run(run_id)) or not isinstance(run, dict):
+
+    try:
+        run = Run(identifier=run_id)
+    except StopIteration:
         if run_shelf_file.exists():
             run_shelf_file.unlink()
         raise ValueError(f"Run '{run_id}' does not exist.")
 
-    if (status := run.get("status")) in ("lost", "terminated", "completed", "failed"):
+    if (status := run.status) in ("lost", "terminated", "completed", "failed"):
         if run_shelf_file.exists():
             run_shelf_file.unlink()
         raise ValueError(f"Run '{run_id}' status is '{status}'.")
@@ -48,19 +51,15 @@ def _check_run_exists(run_id: str) -> pathlib.Path:
     # If the run was created by other means, need to make a local cache file
     # retrieve last time step, and the start time of the run
     if not run_shelf_file.exists():
-        metrics = run["metrics"]
-
-        if not isinstance(metrics, dict):
-            raise RuntimeError(f"Expected metrics to be of type 'dict', but got '{metrics}'")
         out_data = {"step": 0, "start_time": time.time()}
-        if metrics and (step := max(metric.get("step") for metric in metrics)):
+        if step := max(metric.get("step", 0) for _, metric in run.metrics or {}):
             out_data["step"] = step
-        if metrics and (time_now := min(metric.get("time") for metric in metrics)):
+        if time_now := min(metric.get("time", 0) for _, metric in run.metrics or {}):
             out_data["start_time"] = time_now
         with run_shelf_file.open("w") as out_f:
             json.dump(out_data, out_f)
 
-    return run_shelf_file
+    return run_shelf_file, run
 
 
 def create_simvue_run(
@@ -98,32 +97,37 @@ def create_simvue_run(
     str | None
         Simvue run ID if successful else None
     """
-    run_name, run_id = Simvue(
-        None, uniq_id=f"{uuid.uuid4()}", mode="online", config=SimvueConfiguration.fetch()
-    ).create_run(
-        data={
-            "tags": tags or [],
-            "status": "running" if running else "created",
-            "ttl": retention,
-            "name": name,
-            "description": description,
-            "system": get_system(),
-            "folder": folder,
-            "heartbeat_timeout": timeout,
-        }
-    )
+    if folder != "/":
+        try:
+            _folder = Folder.new(path=folder)
+            _folder.commit()
+        except RuntimeError as e:
+            if "status 409" not in e.args[0]:
+                raise e
+    _run = Run.new(folder=folder)
+
+    _run.tags = tags or []
+    _run.status = "running" if running else "created"
+    _run.ttl = retention
+    _run.description = description
+    _run.system = get_system()
+    if name:
+        _run.name = name
+    _run.commit()
+    _id = _run.id
+    _name = _run.name
 
     if not CACHE_DIRECTORY.exists():
         CACHE_DIRECTORY.mkdir(parents=True)
 
-    with CACHE_DIRECTORY.joinpath(f"{run_id}.json").open("w") as out_f:
+    with CACHE_DIRECTORY.joinpath(f"{_id}.json").open("w") as out_f:
         json.dump(
-            {"id": run_id, "name": run_name, "start_time": time.time(), "step": 0},
+            {"id": _id, "name": _name, "start_time": time.time(), "step": 0},
             out_f,
             indent=2,
         )
 
-    return run_id
+    return _id
 
 
 def log_metrics(run_id: str, metrics: dict[str, int | float]) -> None:
@@ -138,7 +142,7 @@ def log_metrics(run_id: str, metrics: dict[str, int | float]) -> None:
         a dictionary containing metrics to be sent
 
     """
-    run_shelf_file = _check_run_exists(run_id)
+    run_shelf_file, run = _check_run_exists(run_id)
 
     run_data = json.load(open(run_shelf_file))
 
@@ -146,14 +150,13 @@ def log_metrics(run_id: str, metrics: dict[str, int | float]) -> None:
         {
             "values": metrics,
             "time": time.time() - run_data["start_time"],
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f"),
             "step": run_data["step"],
         }
     ]
 
-    Simvue(None, uniq_id=run_id, mode="online", config=SimvueConfiguration.fetch()).send_metrics(
-        msgpack.packb({"metrics": metrics_list, "run": run_id}, use_bin_type=True)
-    )
+    _metrics = Metrics.new(run_id=run.id, metrics=metrics_list)
+    _metrics.commit()
 
     with open(run_shelf_file, "w") as out_f:
         run_data["step"] += 1
@@ -172,7 +175,7 @@ def log_event(run_id: str, event_message: str) -> None:
         the message to be displayed
 
     """
-    _check_run_exists(run_id)
+    _, run = _check_run_exists(run_id)
 
     events_list: list[dict] = [
         {
@@ -181,12 +184,10 @@ def log_event(run_id: str, event_message: str) -> None:
         }
     ]
 
-    Simvue(None, uniq_id=run_id, mode="online", config=SimvueConfiguration.fetch()).send_event(
-        msgpack.packb({"events": events_list, "run": run_id}, use_bin_type=True)
-    )
+    run.log_entries("events", events_list)
 
 
-def set_run_status(run_id: str, status: str, **kwargs) -> None:
+def set_run_status(run_id: str, status: str, reason: str | None = None) -> None:
     """Update the status of a Simvue run
 
     Parameters
@@ -196,21 +197,21 @@ def set_run_status(run_id: str, status: str, **kwargs) -> None:
         unique identifier for the target run
     status : str
         the new status for this run
-    **kwargs : dict
-        additional attributes required by the server to set the status
 
     """
-    run_shelf_file = _check_run_exists(run_id)
-
-    Simvue(name=None, uniq_id=run_id, mode="online", config=SimvueConfiguration.fetch()).update(
-        data={"status": status} | kwargs
-    )
+    run_shelf_file, run = _check_run_exists(run_id)
+    run.read_only(False)
+    if status == "terminated" and reason:
+        run.abort(reason)
+    else:
+        run.status = status
+        run.commit()
 
     if status in {"completed", "lost", "failed", "terminated"}:
         run_shelf_file.unlink()
 
 
-def update_metadata(run_id: str, metadata: dict[str, typing.Any], **kwargs) -> None:
+def update_metadata(run_id: str, metadata: dict[str, typing.Any]) -> None:
     """Update the metadata of a Simvue run
 
     Parameters
@@ -220,15 +221,11 @@ def update_metadata(run_id: str, metadata: dict[str, typing.Any], **kwargs) -> N
         unique identifier for the target run
     metadata : dict
         the new status for this run
-    **kwargs : dict
-        additional attributes required by the server to set the status
 
     """
-    _check_run_exists(run_id)
-
-    Simvue(name=None, uniq_id=run_id, mode="online", config=SimvueConfiguration.fetch()).update(
-        data={"metadata": metadata} | kwargs
-    )
+    _, run = _check_run_exists(run_id)
+    run.metadata = metadata
+    run.commit()
 
 
 def get_server_version() -> typing.Union[str, int]:
@@ -242,10 +239,8 @@ def get_server_version() -> typing.Union[str, int]:
         either the version of the server as a string, or the status code of the
         failed HTTP request
     """
-    simvue_instance = Simvue(name=None, uniq_id="", mode="online", config=SimvueConfiguration.fetch())
-    response = sv_api.get(
-        f"{simvue_instance._config.server.url}/api/version", headers=simvue_instance._headers
-    )
+    _url, _headers = get_url_and_headers()
+    response = sv_api.get(f"{_url}/api/version", headers=_headers)
     if response.status_code != 200:
         return response.status_code
 
@@ -260,51 +255,45 @@ def user_info() -> dict:
     dict
         the JSON response from the 'whomai' request to the Simvue server
     """
-    simvue_instance = Simvue(name=None, uniq_id="", mode="online", config=SimvueConfiguration.fetch())
-    response = sv_api.get(
-        f"{simvue_instance._config.server.url}/api/whoami", headers=simvue_instance._headers
-    )
+    _url, _headers = get_url_and_headers()
+    response = sv_api.get(f"{_url}/api/whoami", headers=_headers)
     return response.status_code if response.status_code != 200 else response.json()
 
 
-def get_runs_list(**kwargs) -> None:
+def get_runs_list(**kwargs) -> typing.Generator[tuple[str, Run], None, None]:
     """Retrieve list of Simvue runs"""
-    client = Client()
-    return client.get_runs(**kwargs)
+    return Run.get(**kwargs)
 
 
 def get_tag_list(**kwargs) -> None:
     """Retrieve list of Simvue tags"""
-    client = Client()
-    return client.get_tags(**kwargs)
+    return Tag.get(**kwargs)
 
 
 def get_folders_list(**kwargs) -> None:
     """Retrieve list of Simvue runs"""
-    client = Client()
-    return client.get_folders(**kwargs)
+    return Folder.get(**kwargs)
 
 
-def get_run(run_id: str) -> None:
+def get_run(run_id: str) -> Run:
     """Retrieve a Run from the Simvue server"""
-    client = Client()
-    return client.get_run(run_id)
+    return Run(identifier=run_id)
 
 
 def delete_run(run_id: str) -> None:
     """Delete a given run from the Simvue server"""
-    client = Client()
-    return client.delete_run(run_id)
+    _run = get_run(run_id)
+    _run.delete()
 
 
-def get_alerts(**kwargs) -> None:
+def get_alerts(**kwargs) -> typing.Generator[AlertBase, None, None]:
     """Retrieve list of Simvue alerts"""
-    #TODO: Implement alert listing
-    client = Client()
-    client.get_alerts()
+    return Alert.get(**kwargs)
 
 
-def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> dict | None:
+def create_user_alert(
+    name: str, trigger_abort: bool, email_notify: bool, description: str | None
+) -> Alert:
     """Create a User alert
 
     Parameters
@@ -315,17 +304,72 @@ def create_user_alert(name: str, trigger_abort: bool, email_notify: bool) -> dic
         whether triggering of this alert will terminate the relevant simulation
     email_notify : bool
         whether trigger of this alert will send an email to the creator
+    description : str | None
+        a description for this alert
 
     Returns
     -------
     dict | None
         server response on alert creation
     """
-    alert_data = {
-        "name": name,
-        "source": "user",
-        "abort": trigger_abort,
-        "notification": "email" if email_notify else "none",
-    }
-    return Simvue(name=None, uniq_id="undefined", mode="online", config=SimvueConfiguration.fetch()).add_alert(alert_data)
+    _alert = UserAlert.new(
+        name=name,
+        notification="email" if email_notify else "none",
+        description=description,
+    )
+    _alert.abort = trigger_abort
+    _alert.commit()
+    return _alert
 
+
+def create_simvue_user(
+    username: str,
+    email: str,
+    full_name: str,
+    manager: bool,
+    admin: bool,
+    disabled: bool,
+    read_only: bool,
+    tenant: str,
+) -> None:
+    """Create a new Simvue user on the server"""
+    _user = User.new(
+        username=username,
+        fullname=full_name,
+        email=email,
+        manager=manager,
+        admin=admin,
+        readonly=read_only,
+        enabled=not disabled,
+        tenant=tenant,
+    )
+    _user.commit()
+
+
+def create_simvue_tenant(
+    name: str,
+    disabled: bool,
+    max_runs: int,
+    max_request_rate: int,
+    max_data_volume: int,
+) -> str:
+    """Create a Tenant on the simvue server"""
+    _tenant = Tenant.new(
+        name=name,
+        enabled=not disabled,
+        max_request_rate=max_request_rate or 0,
+        max_runs=max_runs or 0,
+        max_data_volume=max_data_volume or 0,
+    )
+    _tenant.commit()
+    return _tenant.id
+
+
+def get_tenant(tenant_id: str) -> Tenant:
+    return Tenant(identifier=tenant_id)
+
+
+def delete_tenant(tenant_id: str) -> None:
+    """Delete a given tenant from the Simvue server"""
+    _tenant = get_tenant(tenant_id)
+    _tenant.delete()
