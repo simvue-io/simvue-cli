@@ -26,7 +26,8 @@ import importlib.metadata
 import tabulate
 import requests
 import simvue as simvue_client
-from simvue.api.objects import Run
+from simvue.api.objects import Run, Folder, Tag, Storage
+from simvue.api.objects.administrator import User, Tenant
 from simvue.exception import ObjectNotFoundError
 
 import simvue_cli.config
@@ -658,6 +659,25 @@ def folder_list(
     click.echo(table)
 
 
+@simvue_folder.command("json")
+@click.argument("folder_id", required=False)
+def get_folder_json(folder_id: str) -> None:
+    """Retrieve folder information from Simvue server
+
+    If no folder_ID is provided the input is read from stdin
+    """
+    if not folder_id:
+        folder_id = input()
+
+    try:
+        folder: Folder = simvue_cli.actions.get_folder(folder_id)
+        folder_info = folder.to_dict()
+        click.echo(json.dumps({k: v for k, v in folder_info.items()}, indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
+
+
 @simvue.group("tag")
 @click.pass_context
 def simvue_tag(ctx) -> None:
@@ -726,6 +746,25 @@ def tag_list(
     click.echo(table)
 
 
+@simvue_tag.command("json")
+@click.argument("tag_id", required=False)
+def get_tag_json(tag_id: str) -> None:
+    """Retrieve tag information from Simvue server
+
+    If no tag_ID is provided the input is read from stdin
+    """
+    if not tag_id:
+        tag_id = input()
+
+    try:
+        tag: Tag = simvue_cli.actions.get_tag(tag_id)
+        tag_info = tag.to_dict()
+        click.echo(json.dumps({k: v for k, v in tag_info.items()}, indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve tag '{tag_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
+
+
 @simvue.group("admin")
 @click.pass_context
 def admin(ctx) -> None:
@@ -783,7 +822,7 @@ def add_tenant(ctx, **kwargs) -> None:
     is_flag=True,
 )
 def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
-    """Remove a tenants from the Simvue server"""
+    """Remove a tenant from the Simvue server"""
     if not tenant_ids:
         tenant_ids = []
         for line in sys.stdin:
@@ -895,6 +934,25 @@ def tenant_list(
         format=table_format,
     )
     click.echo(table)
+
+
+@simvue_tenant.command("json")
+@click.argument("tenant_id", required=False)
+def get_tenant_json(tenant_id: str) -> None:
+    """Retrieve tenant information from Simvue server
+
+    If no tenant_ID is provided the input is read from stdin
+    """
+    if not tenant_id:
+        tenant_id = input()
+
+    try:
+        tenant: Tenant = simvue_cli.actions.get_tenant(tenant_id)
+        tenant_info = tenant.to_dict()
+        click.echo(json.dumps({k: v for k, v in tenant_info.items()}, indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve tenant '{tenant_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
 
 
 @admin.group("user")
@@ -1024,8 +1082,230 @@ def list_user(
 @click.option(
     "--read-only", is_flag=True, default=False, help="give this user only read access"
 )
+@click.option("--welcome", is_flag=True, default=False, help="display welcome message")
 def add_user(ctx, **kwargs) -> None:
     simvue_cli.actions.create_simvue_user(**kwargs)
+
+
+@user.command("remove")
+@click.pass_context
+@click.argument("user_ids", type=str, nargs=-1, required=False)
+@click.option(
+    "-i",
+    "--interactive",
+    help="Prompt for confirmation on removal",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+def delete_user(ctx, user_ids: list[str] | None, interactive: bool) -> None:
+    """Remove a user from the Simvue server"""
+    if not user_ids:
+        user_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            user_ids += [k.strip() for k in line.split(" ")]
+
+    for user_id in user_ids:
+        try:
+            simvue_cli.actions.get_user(user_id)
+        except (ObjectNotFoundError, RuntimeError):
+            error_msg = f"user '{user_id}' not found"
+            if ctx.obj["plain"]:
+                print(error_msg)
+            else:
+                click.secho(error_msg, fg="red", bold=True)
+            sys.exit(1)
+
+        if interactive:
+            remove = click.confirm(f"Remove user '{user_id}'?")
+            if not remove:
+                continue
+
+        try:
+            simvue_cli.actions.delete_user(user_id)
+        except ValueError as e:
+            click.echo(
+                e.args[0]
+                if ctx.obj["plain"]
+                else click.style(e.args[0], fg="red", bold=True)
+            )
+            sys.exit(1)
+
+        response_message = f"user '{user_id}' removed successfully."
+
+        if ctx.obj["plain"]:
+            print(response_message)
+        else:
+            click.secho(response_message, bold=True, fg="green")
+
+
+@user.command("json")
+@click.argument("user_id", required=False)
+def get_user_json(user_id: str) -> None:
+    """Retrieve user information from Simvue server
+
+    If no user_ID is provided the input is read from stdin
+    """
+    if not user_id:
+        user_id = input()
+
+    try:
+        user: User = simvue_cli.actions.get_user(user_id)
+        user_info = user.to_dict()
+        click.echo(json.dumps({k: v for k, v in user_info.items()}, indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve user '{user_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
+
+
+@simvue.group("storage")
+@click.pass_context
+def simvue_storage(ctx):
+    """View and manage Simvue storages"""
+    pass
+
+
+@simvue_storage.command("json")
+@click.pass_context
+@click.argument("storage_id", required=False)
+def get_storage_json(storage_id: str) -> None:
+    """Retrieve storage information from Simvue server
+
+    If no storage_ID is provided the input is read from stdin
+    """
+    if not storage_id:
+        storage_id = input()
+
+    try:
+        storage: Storage = simvue_cli.actions.get_storage(storage_id)
+        storage_info = storage.to_dict()
+        click.echo(json.dumps({k: v for k, v in storage_info.items()}, indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve storage '{storage_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
+
+
+@simvue_storage.command("remove")
+@click.pass_context
+@click.argument("storage_ids", type=str, nargs=-1, required=False)
+@click.option(
+    "-i",
+    "--interactive",
+    help="Prompt for confirmation on removal",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> None:
+    """Remove a storage from the Simvue server"""
+    if not storage_ids:
+        storage_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            storage_ids += [k.strip() for k in line.split(" ")]
+
+    for storage_id in storage_ids:
+        try:
+            simvue_cli.actions.get_storage(storage_id)
+        except (ObjectNotFoundError, RuntimeError):
+            error_msg = f"storage '{storage_id}' not found"
+            if ctx.obj["plain"]:
+                print(error_msg)
+            else:
+                click.secho(error_msg, fg="red", bold=True)
+            sys.exit(1)
+
+        if interactive:
+            remove = click.confirm(f"Remove storage '{storage_id}'?")
+            if not remove:
+                continue
+
+        try:
+            simvue_cli.actions.delete_storage(storage_id)
+        except ValueError as e:
+            click.echo(
+                e.args[0]
+                if ctx.obj["plain"]
+                else click.style(e.args[0], fg="red", bold=True)
+            )
+            sys.exit(1)
+
+        response_message = f"storage '{storage_id}' removed successfully."
+
+        if ctx.obj["plain"]:
+            print(response_message)
+        else:
+            click.secho(response_message, bold=True, fg="green")
+
+
+@simvue_storage.command("list")
+@click.pass_context
+@click.option(
+    "--format",
+    type=click.Choice(list(tabulate._table_formats.keys())),
+    help="Display as table with output format",
+    default=None,
+)
+@click.option(
+    "--enumerate",
+    "enumerate_",
+    is_flag=True,
+    help="Show counter next to storages",
+    default=False,
+    show_default=True,
+)
+@click.option(
+    "--count",
+    "count_limit",
+    type=int,
+    help="Maximum number of storages to retrieve",
+    default=20,
+    show_default=True,
+)
+@click.option("--name", is_flag=True, help="Show names")
+@click.option("--backend", is_flag=True, help="Show backend")
+@click.option("--created", is_flag=True, help="Show created timestamp")
+@click.option("--default", is_flag=True, help="Show if default storage")
+@click.option("--tenant-usable", is_flag=True, help="Show if usable by current tenant")
+@click.option("--enabled", is_flag=True, help="Show if storage is enabled")
+def list_storages(
+    ctx,
+    format: str,
+    backend: bool,
+    tenant_usable: bool,
+    default: bool,
+    enabled: bool,
+    created: bool,
+    enumerate_: bool,
+    name: bool,
+    **kwargs,
+) -> None:
+    """Retrieve storages list from Simvue server"""
+    storages = simvue_cli.actions.get_storages_list(**kwargs)
+    columns = ["id"]
+
+    if created:
+        columns.append("created")
+    if name:
+        columns.append("name")
+    if backend:
+        columns.append("backend")
+    if tenant_usable:
+        columns.append("tenant_usable")
+    if default:
+        columns.append("default")
+
+    table = create_objects_display(
+        columns,
+        storages,
+        plain_text=ctx.obj["plain"],
+        enumerate_=enumerate_,
+        format=format,
+    )
+    click.echo(table)
 
 
 if __name__ in "__main__":

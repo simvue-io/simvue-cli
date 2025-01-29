@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 from simvue.run import get_system
 from simvue.api.objects.alert.base import AlertBase
-from simvue.api.objects import Alert, Run, Tag, Folder, UserAlert, Metrics
+from simvue.api.objects import Alert, Run, Tag, Folder, UserAlert, Metrics, Storage
 from simvue.api.objects.administrator import User, Tenant
 
 from .config import get_url_and_headers
@@ -270,6 +270,16 @@ def get_tag_list(**kwargs) -> None:
     return Tag.get(**kwargs)
 
 
+def get_storages_list(**kwargs) -> typing.Generator[tuple[str, Storage], None, None]:
+    """Retrieve list of Simvue storages"""
+    return Storage.get(**kwargs)
+
+
+def get_storage_list(**kwargs) -> None:
+    """Retrieve list of Simvue storages"""
+    return Storage.get(**kwargs)
+
+
 def get_folders_list(**kwargs) -> None:
     """Retrieve list of Simvue runs"""
     return Folder.get(**kwargs)
@@ -341,6 +351,7 @@ def create_simvue_user(
     disabled: bool,
     read_only: bool,
     tenant: str,
+    welcome: bool,
 ) -> str:
     """Create a new Simvue user on the server.
 
@@ -362,6 +373,8 @@ def create_simvue_user(
         give only read-only access to this user
     tenant : str
         the tenant to assign this user to
+    welcome : bool
+        display welcome message
 
 
     Returns
@@ -378,6 +391,7 @@ def create_simvue_user(
         readonly=read_only,
         enabled=not disabled,
         tenant=tenant,
+        welcome=welcome,
     )
     _user.commit()
 
@@ -427,7 +441,33 @@ def get_tenant(tenant_id: str) -> Tenant:
     return Tenant(identifier=tenant_id)
 
 
+def get_folder(folder_id: str) -> Folder:
+    """Retrieve a folder from the server"""
+    return Folder(identifier=folder_id)
+
+
+def get_tag(tag_id: str) -> Tag:
+    """Retrieve a tag from the server"""
+    return Tag(identifier=tag_id)
+
+
+def get_storage(storage_id: str) -> Storage:
+    """Retrieve a storage from the server"""
+    return Storage(identifier=storage_id)
+
+
+def get_user(user_id: str) -> User:
+    """Retrieve a user from the server"""
+    return User(identifier=user_id)
+
+
 def delete_tenant(tenant_id: str) -> None:
     """Delete a given tenant from the Simvue server"""
     _tenant = get_tenant(tenant_id)
     _tenant.delete()
+
+
+def delete_user(user_id: str) -> None:
+    """Delete a given user from the Simvue server"""
+    _user = get_user(user_id)
+    _user.delete()
