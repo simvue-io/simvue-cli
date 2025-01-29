@@ -118,7 +118,7 @@ def whoami(user: bool, tenant: bool) -> None:
         click.secho("cannot print 'only' with more than one choice")
         raise click.Abort
     user_info = simvue_cli.actions.user_info()
-    user_name = user_info.get("username")
+    user_name = user_info.get("user")
     tenant_info = user_info.get("tenant")
     if user:
         click.secho(user_name)

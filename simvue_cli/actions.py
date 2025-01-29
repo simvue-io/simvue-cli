@@ -13,13 +13,22 @@ import json
 import typing
 import time
 
-import simvue.api as sv_api
+import simvue.api.request as sv_api
 
 from datetime import datetime, timezone
 
 from simvue.run import get_system
 from simvue.api.objects.alert.base import AlertBase
-from simvue.api.objects import Alert, Run, Tag, Folder, UserAlert, Metrics, Storage
+from simvue.api.objects import (
+    Alert,
+    Run,
+    Tag,
+    Folder,
+    UserAlert,
+    Metrics,
+    Storage,
+    Stats,
+)
 from simvue.api.objects.administrator import User, Tenant
 
 from .config import get_url_and_headers
@@ -253,11 +262,9 @@ def user_info() -> dict:
     Returns
     -------
     dict
-        the JSON response from the 'whomai' request to the Simvue server
+        the JSON response from the 'whoami' request to the Simvue server
     """
-    _url, _headers = get_url_and_headers()
-    response = sv_api.get(f"{_url}/api/whoami", headers=_headers)
-    return response.status_code if response.status_code != 200 else response.json()
+    return Stats().whoami()
 
 
 def get_runs_list(**kwargs) -> typing.Generator[tuple[str, Run], None, None]:
