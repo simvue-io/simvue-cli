@@ -267,8 +267,11 @@ def create_run(
 def delete_run(ctx, run_ids: list[str] | None, interactive: bool) -> None:
     """Remove a runs from the Simvue server"""
     if not run_ids:
-        run_ids_str = input()
-        run_ids = run_ids_str.split(" ")
+        run_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            run_ids += [k.strip() for k in line.split(" ")]
 
     for run_id in run_ids:
         try:
@@ -600,14 +603,14 @@ def simvue_folder(ctx) -> None:
     "--enumerate",
     "enumerate_",
     is_flag=True,
-    help="Show counter next to runs",
+    help="Show counter next to folders",
     default=False,
     show_default=True,
 )
 @click.option(
     "--count",
     type=int,
-    help="Maximum number of runs to retrieve",
+    help="Maximum number of folders to retrieve",
     default=20,
     show_default=True,
 )
@@ -782,8 +785,11 @@ def add_tenant(ctx, **kwargs) -> None:
 def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
     """Remove a tenants from the Simvue server"""
     if not tenant_ids:
-        tenant_ids_str = input()
-        tenant_ids = tenant_ids_str.split(" ")
+        tenant_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            tenant_ids += [k.strip() for k in line.split(" ")]
 
     for tenant_id in tenant_ids:
         try:
@@ -817,6 +823,101 @@ def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
             print(response_message)
         else:
             click.secho(response_message, bold=True, fg="green")
+
+
+@tenant.command("list")
+@click.pass_context
+@click.option(
+    "--format",
+    "table_format",
+    type=click.Choice(list(tabulate._table_formats.keys())),
+    help="Display as table with output format",
+    default=None,
+)
+@click.option(
+    "--enumerate",
+    "enumerate_",
+    is_flag=True,
+    help="Show counter next to tenants",
+    default=False,
+    show_default=True,
+)
+@click.option(
+    "--count",
+    type=int,
+    help="Maximum number of tenants to retrieve",
+    default=20,
+    show_default=True,
+)
+@click.option("--max-runs", is_flag=True, help="Show max runs")
+@click.option("--max-data-volume", is_flag=True, help="Show maximum data volume")
+@click.option("--max-folders", is_flag=True, help="Show maximum folders")
+@click.option(
+    "--max-metric-names", is_flag=True, help="Show maximum metric names per run"
+)
+@click.option("--max-alerts", is_flag=True, help="Show maximum alerts")
+@click.option("--max-request-rate", is_flag=True, help="Show maximum request rate")
+@click.option("--max-tags", is_flag=True, help="Show maximum tags")
+@click.option("--max-alerts-per-run", is_flag=True, help="Show maximum alerts per run")
+@click.option("--max-tags-per-run", is_flag=True, help="Show maximum tags per run")
+@click.option("--created", is_flag=True, help="Show created timestamp")
+@click.option("--name", is_flag=True, help="Show names")
+@click.option("--enabled", is_flag=True, help="Show if enabled")
+def tenant_list(
+    ctx,
+    table_format: str,
+    enumerate_: bool,
+    count: int,
+    max_runs: bool,
+    max_data_volume: bool,
+    max_folders: bool,
+    max_alerts: bool,
+    max_request_rate: bool,
+    max_tags: bool,
+    max_alerts_per_run: bool,
+    max_tags_per_run: bool,
+    created: bool,
+    name: bool,
+    enabled: bool,
+    **kwargs,
+) -> None:
+    """Retrieve tenants list from Simvue server"""
+    runs = simvue_cli.actions.get_tenants_list(**kwargs)
+    if not runs:
+        return
+    columns = ["id"]
+
+    if created:
+        columns.append("created")
+    if name:
+        columns.append("name")
+    if enabled:
+        columns.append("enabled")
+    if max_runs:
+        columns.append("max_runs")
+    if max_data_volume:
+        columns.append("max_data_volume")
+    if max_folders:
+        columns.append("max_folders")
+    if max_alerts:
+        columns.append("max_alerts")
+    if max_request_rate:
+        columns.append("max_request_rate")
+    if max_tags:
+        columns.append("max_tags")
+    if max_alerts_per_run:
+        columns.append("max_alerts_per_run")
+    if max_tags_per_run:
+        columns.append("max_tags_per_run")
+
+    table = create_objects_display(
+        columns,
+        runs,
+        plain_text=ctx.obj["plain"],
+        enumerate_=enumerate_,
+        format=table_format,
+    )
+    click.echo(table)
 
 
 @admin.group("user")

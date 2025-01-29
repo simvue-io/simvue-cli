@@ -275,6 +275,11 @@ def get_folders_list(**kwargs) -> None:
     return Folder.get(**kwargs)
 
 
+def get_tenants_list(**kwargs) -> typing.Generator[tuple[str, Tenant], None, None]:
+    """Retrieve list of Simvue tenants"""
+    return Tenant.get(**kwargs)
+
+
 def get_run(run_id: str) -> Run:
     """Retrieve a Run from the Simvue server"""
     return Run(identifier=run_id)
