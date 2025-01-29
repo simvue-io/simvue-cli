@@ -280,6 +280,11 @@ def get_tenants_list(**kwargs) -> typing.Generator[tuple[str, Tenant], None, Non
     return Tenant.get(**kwargs)
 
 
+def get_users_list(**kwargs) -> typing.Generator[tuple[str, User], None, None]:
+    """Retrieve list of Simvue users"""
+    return User.get(**kwargs)
+
+
 def get_run(run_id: str) -> Run:
     """Retrieve a Run from the Simvue server"""
     return Run(identifier=run_id)
@@ -336,8 +341,34 @@ def create_simvue_user(
     disabled: bool,
     read_only: bool,
     tenant: str,
-) -> None:
-    """Create a new Simvue user on the server"""
+) -> str:
+    """Create a new Simvue user on the server.
+
+    Parameters
+    ----------
+    username : str
+        username for this user
+    email : str
+        contact email for the user
+    full_name : str
+        given name and surname for the user
+    manager : bool
+        assign the manager role to this user
+    admin : bool
+        assign the admin role to this user
+    disabled : bool
+        whether the user is disabled on creation
+    read_only : bool
+        give only read-only access to this user
+    tenant : str
+        the tenant to assign this user to
+
+
+    Returns
+    -------
+    str
+        the unique identifier for the user
+    """
     _user = User.new(
         username=username,
         fullname=full_name,
@@ -350,6 +381,8 @@ def create_simvue_user(
     )
     _user.commit()
 
+    return _user.id
+
 
 def create_simvue_tenant(
     name: str,
@@ -358,7 +391,26 @@ def create_simvue_tenant(
     max_request_rate: int,
     max_data_volume: int,
 ) -> str:
-    """Create a Tenant on the simvue server"""
+    """Create a Tenant on the simvue server.
+
+    Parameters
+    ----------
+    name : str
+        name for this tenant
+    disabled : bool
+        disable this tenant on creation
+    max_runs : int
+        maximum number of runs for this tenant
+    max_request_rate : int
+        maximum number of requests for this tenant
+    max_data_volume : int
+        maximum data volume for this tenant
+
+    Returns
+    -------
+    str
+        the unique identifer for the user
+    """
     _tenant = Tenant.new(
         name=name,
         enabled=not disabled,
@@ -371,6 +423,7 @@ def create_simvue_tenant(
 
 
 def get_tenant(tenant_id: str) -> Tenant:
+    """Retrieve a tenant from the server"""
     return Tenant(identifier=tenant_id)
 
 

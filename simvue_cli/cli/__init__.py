@@ -735,11 +735,11 @@ def admin(ctx) -> None:
 
 @admin.group("tenant")
 @click.pass_context
-def tenant(ctx) -> None:
+def simvue_tenant(ctx) -> None:
     """Manager server tenants"""
 
 
-@tenant.command("add")
+@simvue_tenant.command("add")
 @click.pass_context
 @click.argument("name", type=SimvueName)
 @click.option(
@@ -771,7 +771,7 @@ def add_tenant(ctx, **kwargs) -> None:
     click.echo(tenant_id if ctx.obj["plain"] else click.style(tenant_id))
 
 
-@tenant.command("remove")
+@simvue_tenant.command("remove")
 @click.pass_context
 @click.argument("tenant_ids", type=str, nargs=-1, required=False)
 @click.option(
@@ -825,7 +825,7 @@ def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
             click.secho(response_message, bold=True, fg="green")
 
 
-@tenant.command("list")
+@simvue_tenant.command("list")
 @click.pass_context
 @click.option(
     "--format",
@@ -851,15 +851,7 @@ def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
 )
 @click.option("--max-runs", is_flag=True, help="Show max runs")
 @click.option("--max-data-volume", is_flag=True, help="Show maximum data volume")
-@click.option("--max-folders", is_flag=True, help="Show maximum folders")
-@click.option(
-    "--max-metric-names", is_flag=True, help="Show maximum metric names per run"
-)
-@click.option("--max-alerts", is_flag=True, help="Show maximum alerts")
 @click.option("--max-request-rate", is_flag=True, help="Show maximum request rate")
-@click.option("--max-tags", is_flag=True, help="Show maximum tags")
-@click.option("--max-alerts-per-run", is_flag=True, help="Show maximum alerts per run")
-@click.option("--max-tags-per-run", is_flag=True, help="Show maximum tags per run")
 @click.option("--created", is_flag=True, help="Show created timestamp")
 @click.option("--name", is_flag=True, help="Show names")
 @click.option("--enabled", is_flag=True, help="Show if enabled")
@@ -870,12 +862,7 @@ def tenant_list(
     count: int,
     max_runs: bool,
     max_data_volume: bool,
-    max_folders: bool,
-    max_alerts: bool,
     max_request_rate: bool,
-    max_tags: bool,
-    max_alerts_per_run: bool,
-    max_tags_per_run: bool,
     created: bool,
     name: bool,
     enabled: bool,
@@ -897,18 +884,8 @@ def tenant_list(
         columns.append("max_runs")
     if max_data_volume:
         columns.append("max_data_volume")
-    if max_folders:
-        columns.append("max_folders")
-    if max_alerts:
-        columns.append("max_alerts")
     if max_request_rate:
         columns.append("max_request_rate")
-    if max_tags:
-        columns.append("max_tags")
-    if max_alerts_per_run:
-        columns.append("max_alerts_per_run")
-    if max_tags_per_run:
-        columns.append("max_tags_per_run")
 
     table = create_objects_display(
         columns,
@@ -925,6 +902,91 @@ def tenant_list(
 def user(ctx) -> None:
     """Manage server users"""
     pass
+
+
+@user.command("list")
+@click.option(
+    "--format",
+    "table_format",
+    type=click.Choice(list(tabulate._table_formats.keys())),
+    help="Display as table with output format",
+    default=None,
+)
+@click.option(
+    "--enumerate",
+    "enumerate_",
+    is_flag=True,
+    help="Show counter next to tenants",
+    default=False,
+    show_default=True,
+)
+@click.option(
+    "--count",
+    type=int,
+    help="Maximum number of tenants to retrieve",
+    default=20,
+    show_default=True,
+)
+@click.option("--username", is_flag=True, default=False, help="display username")
+@click.option("--email", is_flag=True, default=False, help="display user email")
+@click.option("--full-name", is_flag=True, default=False, help="display user full name")
+@click.option("--admin", is_flag=True, default=False, help="show admin status")
+@click.option("--manager", is_flag=True, default=False, help="show manager status")
+@click.option("--enabled", is_flag=True, default=False, help="show enabled status")
+@click.option(
+    "--read-only", is_flag=True, default=False, help="show user read only status"
+)
+@click.option(
+    "--deleted", is_flag=True, default=False, help="show user deletion status"
+)
+@click.pass_context
+def list_user(
+    ctx,
+    enumerate_: bool,
+    count: int,
+    table_format: str | None,
+    username: bool,
+    email: bool,
+    full_name: bool,
+    admin: bool,
+    manager: bool,
+    enabled: bool,
+    read_only: bool,
+    deleted: bool,
+    **kwargs,
+) -> None:
+    """Retrieve user list from Simvue server"""
+    users = simvue_cli.actions.get_users_list(**kwargs)
+    if not users:
+        return
+
+    columns = ["id"]
+
+    if username:
+        columns.append("username")
+    if email:
+        columns.append("email")
+    if full_name:
+        columns.append("fullname")
+    if admin:
+        columns.append("admin")
+    if manager:
+        columns.append("manager")
+    if enabled:
+        columns.append("enabled")
+    if read_only:
+        columns.append("readonly")
+    if deleted:
+        columns.append("deleted")
+
+    table = create_objects_display(
+        columns,
+        users,
+        plain_text=ctx.obj["plain"],
+        enumerate_=enumerate_,
+        format=table_format,
+    )
+    click.echo(table)
 
 
 @user.command("add")
