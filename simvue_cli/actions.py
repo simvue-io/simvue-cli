@@ -8,12 +8,17 @@ Contains callbacks for CLI commands
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
+from os import path
 import pathlib
 import json
 import typing
 import time
+import venv
+import subprocess
 
+import click
 import simvue.api.request as sv_api
+import simvue.metadata as sv_meta
 
 from datetime import datetime, timezone
 
@@ -79,6 +84,7 @@ def create_simvue_run(
     folder: str,
     timeout: int | None,
     retention: int | None,
+    environment: bool,
 ) -> str | None:
     """Create and initialise a new Simvue run
 
@@ -99,6 +105,8 @@ def create_simvue_run(
         timout of run
     retention : int | None
         retention period in seconds
+    environment : bool
+        include environment in metadata
 
     Returns
     -------
@@ -120,6 +128,9 @@ def create_simvue_run(
     _run.ttl = retention
     _run.description = description
     _run.system = get_system()
+
+    if environment:
+        _run.metadata = sv_meta.environment()
     if name:
         _run.name = name
     _run.commit()
@@ -478,3 +489,36 @@ def delete_user(user_id: str) -> None:
     """Delete a given user from the Simvue server"""
     _user = get_user(user_id)
     _user.delete()
+
+
+def create_environment(
+    language: typing.Literal["python", "rust", "julia", "javascript"],
+    venv_directory: str,
+    run: str,
+    allow_existing: bool,
+) -> None:
+    _run = get_run(run)
+    if not (_venv_def := _run.metadata.get(language, {}).get("environment")):
+        raise RuntimeError(
+            f"Run '{_run.id}' does not have an environment of type '{language}'"
+        )
+
+    if language == "python":
+        _pip_bin = (_venv_dir := pathlib.Path(venv_directory)).joinpath("bin", "pip")
+        if _venv_dir.exists() and (not _pip_bin.exists() or not allow_existing):
+            raise FileExistsError(
+                "Cannot create environment, directory already exists!"
+            )
+        elif _pip_bin.exists():
+            click.echo("Installing dependencies into existing environment.")
+        else:
+            venv.create(env_dir=venv_directory, with_pip=True, upgrade_deps=True)
+        _command: list[str] = [f"{_pip_bin}", "install", "--isolated", "--no-cache-dir"]
+
+        for dependency, version in _venv_def.items():
+            try:
+                subprocess.run(args=_command + [f"{dependency}=={version}"])
+            except subprocess.CalledProcessError as e:
+                click.echo(
+                    f"Warning: Failed to install '{dependency}=={version}': {e.args[0]}"
+                )

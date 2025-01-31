@@ -244,6 +244,9 @@ def simvue_run(ctx) -> None:
     help="Specify retention period",
     default=None,
 )
+@click_option_group.optgroup.option(
+    "--environment", is_flag=True, default=False, help="Include environment metadata"
+)
 def create_run(
     ctx, create_only: bool, tag: tuple[str, ...] | None, **run_params
 ) -> None:
@@ -806,6 +809,7 @@ def simvue_tenant(ctx) -> None:
     help="data storage limit for this tenant",
 )
 def add_tenant(ctx, **kwargs) -> None:
+    """Add a tenant to the Simvue server"""
     tenant_id: str = simvue_cli.actions.create_simvue_tenant(**kwargs)
     click.echo(tenant_id if ctx.obj["plain"] else click.style(tenant_id))
 
@@ -1084,6 +1088,7 @@ def list_user(
 )
 @click.option("--welcome", is_flag=True, default=False, help="display welcome message")
 def add_user(ctx, **kwargs) -> None:
+    """Add a user to the Simvue server"""
     simvue_cli.actions.create_simvue_user(**kwargs)
 
 
@@ -1306,6 +1311,34 @@ def list_storages(
         format=format,
     )
     click.echo(table)
+
+
+@simvue.command("venv")
+@click.pass_context
+@click.option(
+    "--language",
+    required=True,
+    help="Specify target language",
+    type=click.Choice(["python", "rust", "julia", "nodejs"]),
+)
+@click.option("--run", required=True, help="ID of run to clone environment from")
+@click.option(
+    "--allow-existing",
+    is_flag=True,
+    help="Install dependencies in an existing environment",
+)
+@click.argument("venv_directory", type=click.Path(exists=False))
+def venv_setup(ctx, **kwargs) -> None:
+    """Initialise virtual environments from run metadata."""
+    try:
+        simvue_cli.actions.create_environment(**kwargs)
+    except (FileExistsError, RuntimeError) as e:
+        error_msg = e.args[0]
+        if ctx.obj["plain"]:
+            print(error_msg)
+        else:
+            click.secho(error_msg, fg="red", bold=True)
+        sys.exit(1)
 
 
 if __name__ in "__main__":
