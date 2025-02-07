@@ -8,12 +8,13 @@ Contains callbacks for CLI commands
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
-from os import path
 import pathlib
 import json
 import typing
 import time
+import toml
 import venv
+import shutil
 import subprocess
 
 import click
@@ -22,7 +23,7 @@ import simvue.metadata as sv_meta
 
 from datetime import datetime, timezone
 
-from simvue.run import get_system
+from simvue.run import Artifact, get_system
 from simvue.api.objects.alert.base import AlertBase
 from simvue.api.objects import (
     Alert,
@@ -313,6 +314,11 @@ def get_users_list(**kwargs) -> typing.Generator[tuple[str, User], None, None]:
     return User.get(**kwargs)
 
 
+def get_artifacts_list(**kwargs) -> typing.Generator[tuple[str, Artifact], None, None]:
+    """Retrieve list of Simvye artifacts"""
+    return Artifact.get(**kwargs)
+
+
 def get_run(run_id: str) -> Run:
     """Retrieve a Run from the Simvue server"""
     return Run(identifier=run_id)
@@ -322,6 +328,12 @@ def delete_run(run_id: str) -> None:
     """Delete a given run from the Simvue server"""
     _run = get_run(run_id)
     _run.delete()
+
+
+def delete_storage(storage_id: str) -> None:
+    """Delete a given storage from the Simvue server"""
+    _storage = get_storage(storage_id)
+    _storage.delete()
 
 
 def get_alerts(**kwargs) -> typing.Generator[AlertBase, None, None]:
@@ -503,8 +515,10 @@ def create_environment(
             f"Run '{_run.id}' does not have an environment of type '{language}'"
         )
 
+    _venv_dir = pathlib.Path(venv_directory)
+
     if language == "python":
-        _pip_bin = (_venv_dir := pathlib.Path(venv_directory)).joinpath("bin", "pip")
+        _pip_bin = _venv_dir.joinpath("bin", "pip")
         if _venv_dir.exists() and (not _pip_bin.exists() or not allow_existing):
             raise FileExistsError(
                 "Cannot create environment, directory already exists!"
@@ -522,3 +536,32 @@ def create_environment(
                 click.echo(
                     f"Warning: Failed to install '{dependency}=={version}': {e.args[0]}"
                 )
+
+    elif language == "rust":
+        if not (_cargo_path := shutil.which("cargo")):
+            raise FileNotFoundError(
+                "Cargo must be installed on this system to create Rust environments."
+            )
+        _toml_file = _venv_dir.joinpath("Cargo.toml")
+        if _venv_dir.exists() and (not _toml_file.exists() or not allow_existing):
+            raise FileExistsError(
+                "Cannot create environment, directory already exists!"
+            )
+        if _venv_dir.exists():
+            _toml_data = toml.load(_toml_file)
+            _dependencies = _toml_data.get("dependencies", {})
+        else:
+            _venv_dir.mkdir()
+            _venv_dir.joinpath("src").mkdir()
+            _venv_dir.joinpath("src", "main.rs").touch()
+            _toml_data = {
+                "package": {"name": "new_project", "version": "0.1.0"},
+            }
+            _dependencies = {}
+
+        _dependencies |= _venv_def
+        _toml_data["dependencies"] = _dependencies
+
+        toml.dump(_toml_data, _toml_file.open("w"))
+
+        subprocess.run([_cargo_path, "build"], cwd=venv_directory)

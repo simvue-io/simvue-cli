@@ -1341,5 +1341,104 @@ def venv_setup(ctx, **kwargs) -> None:
         sys.exit(1)
 
 
+@simvue.group("artifact")
+@click.pass_context
+def simvue_artifact(ctx):
+    """View and manage Simvue artifacts"""
+    pass
+
+
+@simvue_artifact.command("list")
+@click.pass_context
+@click.option(
+    "--format",
+    type=click.Choice(list(tabulate._table_formats.keys())),
+    help="Display as table with output format",
+    default=None,
+)
+@click.option(
+    "--enumerate",
+    "enumerate_",
+    is_flag=True,
+    help="Show counter next to runs",
+    default=False,
+    show_default=True,
+)
+@click.option(
+    "--count",
+    "count_limit",
+    type=int,
+    help="Maximum number of runs to retrieve",
+    default=20,
+    show_default=True,
+)
+@click.option(
+    "--original-path",
+    is_flag=True,
+    help="Show original path of artifact",
+    default=False,
+)
+@click.option(
+    "--storage", is_flag=True, help="Show storage ID of artifact", default=False
+)
+@click.option(
+    "--mime-type", is_flag=True, help="Show MIME type of artifact", default=False
+)
+@click.option("--created", is_flag=True, help="Show created timestamp")
+@click.option("--user", is_flag=True, help="Show artifact user UUID")
+@click.option("--download-url", is_flag=True, help="Show artifact download URL")
+@click.option("--uploaded", is_flag=True, help="Show artifact upload status")
+@click.option("--checksum", is_flag=True, help="Show artifact checksum")
+@click.option("--name", is_flag=True, help="Show artifact name")
+@click.option("--size", is_flag=True, help="Show artifact size")
+@click.pass_context
+def artifact_list(
+    ctx,
+    format_: str,
+    enumerate_: bool,
+    original_path: bool,
+    storage: bool,
+    mime_type: bool,
+    created: bool,
+    user: bool,
+    download_url: bool,
+    uploaded: bool,
+    name: bool,
+    size: bool,
+    **kwargs,
+) -> None:
+    """Retrieve artifact list from Simvue server"""
+    storages = simvue_cli.actions.get_artifacts_list(**kwargs)
+    columns = ["id"]
+
+    if created:
+        columns.append("created")
+    if name:
+        columns.append("name")
+    if size:
+        columns.append("size")
+    if original_path:
+        columns.append("original_path")
+    if storage:
+        columns.append("storage")
+    if uploaded:
+        columns.append("uploaded")
+    if mime_type:
+        columns.append("mime_type")
+    if user:
+        columns.append("user")
+    if download_url:
+        columns.append("download_url")
+
+    table = create_objects_display(
+        columns,
+        storages,
+        plain_text=ctx.obj["plain"],
+        enumerate_=enumerate_,
+        format=format,
+    )
+    click.echo(table)
+
+
 if __name__ in "__main__":
     simvue()
