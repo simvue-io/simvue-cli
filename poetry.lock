@@ -1863,7 +1863,7 @@ files = [
 
 [[package]]
 name = "simvue"
-version = "1.1.4"
+version = "2.0.0a0"
 description = "Simulation tracking and monitoring"
 optional = false
 python-versions = ">=3.10,<3.14"
@@ -1899,8 +1899,8 @@ plot = ["matplotlib (>=3.10.0,<4.0.0)", "plotly (>=6.0.0,<7.0.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/simvue-io/python-api.git"
-reference = "feature/api-repro"
-resolved_reference = "2959efba77365ab79ca36a966b39933b32f957cf"
+reference = "v2.0.0a0"
+resolved_reference = "5a94ff9bae5f54d3e2150b55e56337199b26330c"
 
 [[package]]
 name = "six"
@@ -2269,4 +2269,4 @@ termcolor = ">=2.3,<3.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "7f66c7f58b334074fea3eaeac8e031ab28badba2fd941ea28573595f9216121d"
+content-hash = "5bd8d70ae24f648121844ef5eb9f8aed6b5af5611ea3ce088a3e41345bfb08df"
