@@ -23,22 +23,24 @@ def create_test_run(request) -> typing.Generator[typing.Tuple[sv_run.Run, dict],
 
 def setup_test_run(run: sv_run.Run, create_objects: bool, request: pytest.FixtureRequest):
     fix_use_id: str = str(uuid.uuid4()).split('-', 1)[0]
+    _test_name: str = request.node.name.replace("[", "_").replace("]", "")
     TEST_DATA = {
         "event_contains": "sent event",
         "metadata": {
             "test_engine": "pytest",
-            "test_identifier": fix_use_id
+            "test_identifier": f"{_test_name}_{fix_use_id}"
         },
         "folder": f"/simvue_cli_testing/{fix_use_id}",
-        "tags": ["simvue_cli_testing", request.node.name.replace("[", "_").replace("]", "_")]
+        "tags": ["simvue_cli_testing", _test_name], 
     }
 
     if os.environ.get("CI"):
         TEST_DATA["tags"].append("ci")
 
     run.config(suppress_errors=False)
+    run._heartbeat_interval = 1
     run.init(
-        name=f"test_run_{TEST_DATA['metadata']['test_identifier']}",
+        name=TEST_DATA['metadata']['test_identifier'],
         tags=TEST_DATA["tags"],
         folder=TEST_DATA["folder"],
         visibility="tenant" if os.environ.get("CI") else None,

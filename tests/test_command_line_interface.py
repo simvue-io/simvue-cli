@@ -110,7 +110,7 @@ def test_run_creation(state: str) -> None:
         ]
     )
     assert result.exit_code == 0, result.output
-    time.sleep(1)
+    time.sleep(2)
     run_data = client.get_run(run_id)
     assert run_data.status == ("terminated" if state == "abort" else "completed")
 
@@ -228,6 +228,36 @@ def test_folder_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
     )
     assert result.exit_code == 0, result.output
     assert run_data["folder"] in result.output
+
+
+def test_artifact_list(create_test_run: tuple[simvue.Run, dict]) -> None:
+    run, run_data = create_test_run
+    assert run.id
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "artifact",
+            "list",
+            "--name",
+            "--original-path",
+            "--user",
+            "--created",
+            "--download-url",
+            "--uploaded",
+            "--checksum",
+            "--size",
+            "--storage",
+            "--mime-type",
+            "--count=20",
+            "--enumerate",
+            f"--format=latex"
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    assert run_data["file_1"] in result.output
+    assert run_data["file_2"] in result.output
+    assert run_data["file_3"] in result.output
 
 
 def test_simvue_monitor() -> None:

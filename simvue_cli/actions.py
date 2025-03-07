@@ -23,10 +23,11 @@ import simvue.metadata as sv_meta
 
 from datetime import datetime, timezone
 
-from simvue.run import Artifact, get_system
+from simvue.run import get_system
 from simvue.api.objects.alert.base import AlertBase
 from simvue.api.objects import (
     Alert,
+    Artifact,
     Run,
     Tag,
     Folder,
@@ -221,12 +222,14 @@ def set_run_status(run_id: str, status: str, reason: str | None = None) -> None:
 
     """
     run_shelf_file, run = _check_run_exists(run_id)
-    run.read_only(False)
+
+    # First record the abort on the server
     if status == "terminated" and reason:
         run.abort(reason)
-    else:
-        run.status = status
-        run.commit()
+
+    run.read_only(False)
+    run.status = status
+    run.commit()
 
     if status in {"completed", "lost", "failed", "terminated"}:
         run_shelf_file.unlink()
