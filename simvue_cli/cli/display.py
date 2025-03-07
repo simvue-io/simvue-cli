@@ -3,6 +3,7 @@ Simvue CLI Display
 
 Contains functions to aid in the display of information.
 """
+
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
@@ -10,6 +11,7 @@ from simvue.factory.proxy import typing
 from simvue.api.objects.base import SimvueObject
 import tabulate
 import click
+import pydantic
 
 SIMVUE_LOGO: str = """
                                                                                                                                             
@@ -46,7 +48,7 @@ CLICK_COLORS: dict[str, str] = {
     "magenta": "black",
     "cyan": "black",
     "bright_red": "white",
-    "bright_green":"black",
+    "bright_green": "black",
     "bright_yellow": "black",
     "bright_blue": "white",
     "bright_magenta": "black",
@@ -72,6 +74,10 @@ def format_status(status: str, plain_text: bool, *_, **__) -> str:
     if plain_text:
         return status
     return click.style(status, fg=STATUS_FORMAT[status], bold=True)
+
+
+def format_color(color: pydantic.color.RGBA, *_, **__) -> str:
+    return f"({color.r}, {color.g}, {color.b})"
 
 
 def format_tags(
@@ -128,6 +134,8 @@ def format_tags(
 COLUMN_FORMAT: dict[str, typing.Callable[[str | list[str]], str]] = {
     "status": format_status,
     "tags": format_tags,
+    "color": format_color,
+    "colour": format_color,
 }
 
 
@@ -167,19 +175,14 @@ def create_objects_display(
     if plain_text:
         return " ".join(obj.id for _, obj in objects)
     table_headers = [
-        click.style(c, bold=True)
-        for c in (("#", *columns) if enumerate_ else columns)
+        click.style(c, bold=True) for c in (("#", *columns) if enumerate_ else columns)
     ]
 
     contents: list[list[str]] = []
     out_config: dict[str, dict[str, typing.Any]] = {}
 
     for i, (_, obj) in enumerate(
-        sorted(
-            objects,
-            key=lambda x: getattr(x[1], "created", x[1].id),
-            reverse=True
-        )
+        sorted(objects, key=lambda x: getattr(x[1], "created", x[1].id), reverse=True)
     ):
         row: list[str] = []
         if enumerate_:
@@ -198,4 +201,3 @@ def create_objects_display(
         return "\n".join(objs_list)
 
     return tabulate.tabulate(contents, headers=table_headers, tablefmt=format).__str__()
-

@@ -1,5 +1,6 @@
 import random
 import string
+from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
 import tabulate
 import simvue
@@ -230,6 +231,27 @@ def test_folder_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
     assert run_data["folder"] in result.output
 
 
+def test_tag_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
+    run, run_data = create_plain_run
+    assert run.id
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "tag",
+            "list",
+            "--name",
+            "--created",
+            "--color",
+            "--enumerate",
+            f"--format=simple"
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    for tag in run_data["tags"]:
+        assert tag in result.output
+
+
 def test_artifact_list(create_test_run: tuple[simvue.Run, dict]) -> None:
     run, run_data = create_test_run
     assert run.id
@@ -258,6 +280,130 @@ def test_artifact_list(create_test_run: tuple[simvue.Run, dict]) -> None:
     assert run_data["file_1"] in result.output
     assert run_data["file_2"] in result.output
     assert run_data["file_3"] in result.output
+
+
+def test_tenant_list() -> None:
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "admin",
+            "tenant",
+            "list",
+            "--max-runs",
+            "--max-data-volume",
+            "--max-request-rate",
+            "--created",
+            "--name",
+            "--enabled",
+            "--count=20",
+            "--enumerate",
+            f"--format=latex"
+        ]
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_user_list() -> None:
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "admin",
+            "user",
+            "list",
+            "--username",
+            "--email",
+            "--full-name",
+            "--manager",
+            "--admin",
+            "--enabled",
+            "--read-only",
+            "--deleted",
+            "--count=20",
+            "--enumerate",
+            f"--format=latex"
+        ]
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_storage_list() -> None:
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "storage",
+            "list",
+            "--name",
+            "--backend",
+            "--created",
+            "--default",
+            "--tenant-usable",
+            "--enabled",
+            "--count=20",
+            "--enumerate",
+            f"--format=latex"
+        ]
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_user_and_tenant() -> None:
+    runner = click.testing.CliRunner()
+    _tenant_name = "simvue_cli_tenant"
+    _user_name = "jbloggs"
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "admin",
+            "tenant",
+            "add",
+            "--max-request-rate=1",
+            "--max-runs=1",
+            "--max-data-volume=1",
+            _tenant_name
+        ]
+    )
+    _tenant_id = result.stdout.strip()
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "admin",
+            "user",
+            "add",
+            "--full-name",
+            "Joe Bloggs",
+            "--email",
+            "jbloggs@simvue.io",
+            "--tenant",
+            _tenant_id,
+            _user_name
+        ],
+    )
+    _user_id = result.stdout.strip()
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "admin",
+            "user",
+            "remove",
+            _user_id
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "admin",
+            "tenant",
+            "remove",
+            _tenant_id
+        ]
+    )
+    assert result.exit_code == 0, result.output
 
 
 def test_simvue_monitor() -> None:

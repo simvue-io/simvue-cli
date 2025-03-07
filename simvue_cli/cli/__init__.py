@@ -1089,7 +1089,7 @@ def list_user(
 @click.option("--welcome", is_flag=True, default=False, help="display welcome message")
 def add_user(ctx, **kwargs) -> None:
     """Add a user to the Simvue server"""
-    simvue_cli.actions.create_simvue_user(**kwargs)
+    click.echo(simvue_cli.actions.create_simvue_user(**kwargs))
 
 
 @user.command("remove")

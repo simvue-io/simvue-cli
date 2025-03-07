@@ -419,9 +419,9 @@ def create_simvue_user(
         username=username,
         fullname=full_name,
         email=email,
-        manager=manager,
-        admin=admin,
-        readonly=read_only,
+        is_manager=manager,
+        is_admin=admin,
+        is_readonly=read_only,
         enabled=not disabled,
         tenant=tenant,
         welcome=welcome,
@@ -460,7 +460,7 @@ def create_simvue_tenant(
     """
     _tenant = Tenant.new(
         name=name,
-        enabled=not disabled,
+        is_enabled=not disabled,
         max_request_rate=max_request_rate or 0,
         max_runs=max_runs or 0,
         max_data_volume=max_data_volume or 0,
