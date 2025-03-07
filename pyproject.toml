@@ -19,7 +19,7 @@ dependencies = [
     "toml (>=0.10.2,<0.11.0)",
     "regex (>=2024.11.6,<2025.0.0)",
     "requests (>=2.32.3,<3.0.0)",
-    "simvue (==2.0.0a3)"
+    "simvue (>=2.0.0)"
 ]
 
 [project.scripts]

@@ -9,6 +9,7 @@ the user to submit metrics and retrieve information from the command line.
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
+import io
 import pathlib
 import sys
 import shutil
@@ -26,7 +27,7 @@ import importlib.metadata
 import tabulate
 import requests
 import simvue as simvue_client
-from simvue.api.objects import Run, Folder, Tag, Storage
+from simvue.api.objects import Run, Folder, S3Storage, Tag, Storage
 from simvue.api.objects.administrator import User, Tenant
 from simvue.exception import ObjectNotFoundError
 
@@ -79,7 +80,7 @@ def ping_server(timeout: int | None) -> None:
     """Ping the Simvue server"""
     successful_pings: int = 0
     with contextlib.suppress(KeyboardInterrupt):
-        url = simvue_client.Client()._config.server.url
+        url = simvue_client.Client()._user_config.server.url
         ip_address = simvue_cli.server.get_ip_of_url(url)
         counter: int = 0
         while True:
@@ -398,7 +399,6 @@ def update_metadata(run_id: str, metadata: dict) -> None:
 )
 @click.option(
     "--count",
-    "count_limit",
     type=int,
     help="Maximum number of runs to retrieve",
     default=20,
@@ -506,13 +506,22 @@ def simvue_alert(ctx) -> None:
     help="Abort run if this alert is triggered",
     show_default=True,
 )
+@click.option("--description", default=None, help="Description for this alert.")
 @click.option(
     "--email", is_flag=True, help="Notify by email if triggered", show_default=True
 )
-def create_alert(ctx, name: str, abort: bool = False, email: bool = False) -> None:
+def create_alert(
+    ctx,
+    name: str,
+    abort: bool = False,
+    email: bool = False,
+    description: str | None = None,
+) -> None:
     """Create a User alert"""
-    result = simvue_cli.actions.create_user_alert(name, abort, email)
-    alert_id = result["id"]
+    result = simvue_cli.actions.create_user_alert(
+        name=name, trigger_abort=abort, email_notify=email, description=description
+    )
+    alert_id = result.id
     click.echo(alert_id if ctx.obj["plain"] else click.style(alert_id))
 
 
@@ -1172,10 +1181,70 @@ def simvue_storage(ctx):
     pass
 
 
+@simvue_storage.group("add")
+@click.pass_context
+def simvue_storage_add(ctx) -> None:
+    """Add a new Simvue storage instance to the server."""
+    pass
+
+
+@simvue_storage_add.command("s3")
+@click.argument("name")
+@click.option(
+    "--disable-check",
+    is_flag=True,
+    default=False,
+    help="Disable checking of storage system.",
+    show_default=True,
+)
+@click.option(
+    "--region-name",
+    help="Name of the region associated with this storage.",
+    required=True,
+)
+@click.option(
+    "--endpoint-url", help="Endpoint defining the S3 upload URL", required=True
+)
+@click.option("--access-key-id", help="Access key identifier.", required=True)
+@click.option(
+    "--access-key-file",
+    help="File containing secret access key",
+    required=True,
+    type=click.File(),
+)
+@click.option(
+    "--bucket", help="The bucket associated with this storage.", required=True
+)
+@click.option(
+    "--block-tenant",
+    is_flag=True,
+    default=False,
+    help="Disable access by current Tenant.",
+    show_default=True,
+)
+@click.option(
+    "--default",
+    is_flag=True,
+    default=False,
+    help="Set this storage to be the default.",
+    show_default=True,
+)
+@click.option(
+    "--disable",
+    is_flag=True,
+    default=False,
+    help="Disable this storage on creation.",
+    show_default=True,
+)
+@click.pass_context
+def add_s3_storage(ctx, **kwargs) -> None:
+    click.echo(simvue_cli.actions.create_simvue_s3_storage(**kwargs))
+
+
 @simvue_storage.command("json")
 @click.pass_context
 @click.argument("storage_id", required=False)
-def get_storage_json(storage_id: str) -> None:
+def get_storage_json(ctx, storage_id: str) -> None:
     """Retrieve storage information from Simvue server
 
     If no storage_ID is provided the input is read from stdin
@@ -1264,7 +1333,6 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
 )
 @click.option(
     "--count",
-    "count_limit",
     type=int,
     help="Maximum number of storages to retrieve",
     default=20,
@@ -1366,7 +1434,6 @@ def simvue_artifact(ctx):
 )
 @click.option(
     "--count",
-    "count_limit",
     type=int,
     help="Maximum number of runs to retrieve",
     default=20,

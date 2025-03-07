@@ -8,6 +8,7 @@ Contains callbacks for CLI commands
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
+import io
 import pathlib
 import json
 import typing
@@ -24,13 +25,16 @@ import simvue.metadata as sv_meta
 from datetime import datetime, timezone
 
 from simvue.run import get_system
+from simvue.models import DATETIME_FORMAT
 from simvue.api.objects.alert.base import AlertBase
 from simvue.api.objects import (
     Alert,
     Artifact,
     Run,
+    S3Storage,
     Tag,
     Folder,
+    Events,
     UserAlert,
     Metrics,
     Storage,
@@ -172,12 +176,12 @@ def log_metrics(run_id: str, metrics: dict[str, int | float]) -> None:
         {
             "values": metrics,
             "time": time.time() - run_data["start_time"],
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "timestamp": datetime.now(timezone.utc).strftime(DATETIME_FORMAT),
             "step": run_data["step"],
         }
     ]
 
-    _metrics = Metrics.new(run_id=run.id, metrics=metrics_list)
+    _metrics = Metrics.new(run=run.id, metrics=metrics_list)
     _metrics.commit()
 
     with open(run_shelf_file, "w") as out_f:
@@ -202,11 +206,12 @@ def log_event(run_id: str, event_message: str) -> None:
     events_list: list[dict] = [
         {
             "message": event_message,
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f"),
         }
     ]
 
-    run.log_entries("events", events_list)
+    _events = Events.new(run=run.id, events=events_list)
+    _events.commit()
 
 
 def set_run_status(run_id: str, status: str, reason: str | None = None) -> None:
@@ -342,6 +347,25 @@ def delete_storage(storage_id: str) -> None:
 def get_alerts(**kwargs) -> typing.Generator[AlertBase, None, None]:
     """Retrieve list of Simvue alerts"""
     return Alert.get(**kwargs)
+
+
+def create_simvue_s3_storage(
+    disable: bool,
+    default: bool,
+    access_key_file: io.BytesIO,
+    block_tenant: bool,
+    **kwargs,
+) -> str:
+    _secret_key: str = access_key_file.read()
+    _storage = S3Storage.new(
+        is_enabled=not disable,
+        is_default=default,
+        secret_access_key=_secret_key,
+        is_tenant_useable=not block_tenant,
+        **kwargs,
+    )
+    _storage.commit()
+    return _storage.id
 
 
 def create_user_alert(

@@ -51,7 +51,7 @@ def test_runs_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
         [
             "run",
             "list",
-            f"--format=latex"
+            f"--format=simple"
         ]
     )
     assert result.exit_code == 0, result.output
@@ -224,7 +224,7 @@ def test_folder_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
             "--description",
             "--tags",
             "--enumerate",
-            f"--format=latex"
+            f"--format=simple"
         ]
     )
     assert result.exit_code == 0, result.output
@@ -273,7 +273,7 @@ def test_artifact_list(create_test_run: tuple[simvue.Run, dict]) -> None:
             "--mime-type",
             "--count=20",
             "--enumerate",
-            f"--format=latex"
+            f"--format=simple"
         ]
     )
     assert result.exit_code == 0, result.output
@@ -298,7 +298,7 @@ def test_tenant_list() -> None:
             "--enabled",
             "--count=20",
             "--enumerate",
-            f"--format=latex"
+            f"--format=simple"
         ]
     )
     assert result.exit_code == 0, result.output
@@ -322,13 +322,63 @@ def test_user_list() -> None:
             "--deleted",
             "--count=20",
             "--enumerate",
-            f"--format=latex"
+            f"--format=simple"
         ]
     )
     assert result.exit_code == 0, result.output
 
 
-def test_storage_list() -> None:
+def test_add_remove_storage() -> None:
+    name = "simvue_cli_test_storage"
+    runner = click.testing.CliRunner()
+    endpoint_url="https://not-a-real-url.io"
+    region_name="fictionsville"
+    access_key_id="dummy_key"
+    secret_access_key="not_a_key"
+    bucket="dummy_bucket"
+    is_enabled=False
+
+    with tempfile.NamedTemporaryFile() as temp_f:
+        with open(temp_f.name, "w") as out_f:
+            out_f.write("not_a_key")
+
+        result = runner.invoke(
+            sv_cli.simvue,
+            [
+                "storage",
+                "add",
+                "s3",
+                name,
+                "--endpoint-url",
+                endpoint_url,
+                "--disable-check",
+                "--block-tenant",
+                "--access-key-id",
+                access_key_id,
+                "--bucket",
+                bucket,
+                "--disable",
+                "--region-name",
+                region_name,
+                "--access-key-file",
+                temp_f.name
+            ],
+            catch_exceptions=False
+        )
+    assert result.exit_code == 0, result.output
+    storage_id = result.stdout.strip()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "storage",
+            "remove",
+            storage_id
+        ]
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_storage() -> None:
     runner = click.testing.CliRunner()
     result = runner.invoke(
         sv_cli.simvue,
@@ -342,9 +392,18 @@ def test_storage_list() -> None:
             "--tenant-usable",
             "--enabled",
             "--count=20",
-            "--enumerate",
-            f"--format=latex"
         ]
+    )
+    assert result.exit_code == 0, result.output
+    _storage_id: str = result.stdout.split()[0]
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "storage",
+            "json",
+            _storage_id.strip()
+        ],
+        catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
 
