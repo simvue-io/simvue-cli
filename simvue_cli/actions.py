@@ -30,6 +30,9 @@ from simvue.api.objects.alert.base import AlertBase
 from simvue.api.objects import (
     Alert,
     Artifact,
+    EventsAlert,
+    MetricsRangeAlert,
+    MetricsThresholdAlert,
     Run,
     S3Storage,
     Tag,
@@ -253,6 +256,7 @@ def update_metadata(run_id: str, metadata: dict[str, typing.Any]) -> None:
 
     """
     _, run = _check_run_exists(run_id)
+    run.read_only(False)
     run.metadata = metadata
     run.commit()
 
@@ -290,6 +294,17 @@ def user_info() -> dict:
 def get_runs_list(**kwargs) -> typing.Generator[tuple[str, Run], None, None]:
     """Retrieve list of Simvue runs"""
     return Run.get(**kwargs)
+
+
+def get_alerts_list(
+    **kwargs,
+) -> typing.Generator[
+    tuple[str, MetricsRangeAlert | MetricsThresholdAlert | EventsAlert | UserAlert],
+    None,
+    None,
+]:
+    """Retrieve list of Simvue alerts"""
+    return Alert.get(**kwargs)
 
 
 def get_tag_list(**kwargs) -> None:

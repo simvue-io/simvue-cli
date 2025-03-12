@@ -9,7 +9,6 @@ the user to submit metrics and retrieve information from the command line.
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
-import io
 import pathlib
 import sys
 import shutil
@@ -497,6 +496,84 @@ def simvue_alert(ctx) -> None:
     pass
 
 
+@simvue_alert.command("list")
+@click.pass_context
+@click.option(
+    "--format",
+    "table_format",
+    type=click.Choice(list(tabulate._table_formats.keys())),
+    help="Display as table with output format",
+    default=None,
+)
+@click.option(
+    "--enumerate",
+    "enumerate_",
+    is_flag=True,
+    help="Show counter next to alerts",
+    default=False,
+    show_default=True,
+)
+@click.option(
+    "--count",
+    type=int,
+    help="Maximum number of alerts to retrieve",
+    default=20,
+    show_default=True,
+)
+@click.option("--path", is_flag=True, help="Show path")
+@click.option("--run-tags", is_flag=True, help="Show tags")
+@click.option("--auto", is_flag=True, help="Show if run tag auto-assign is enabled")
+@click.option("--notification", is_flag=True, help="Show notification setting")
+@click.option("--source", is_flag=True, help="Show alert source")
+@click.option("--enabled", is_flag=True, help="Show if alert enabled")
+@click.option("--abort", is_flag=True, help="Show alert if alert can abort runs")
+@click.option("--name", is_flag=True, help="Show names")
+@click.option("--description", is_flag=True, help="Show description")
+def alert_list(
+    ctx,
+    table_format: str,
+    enumerate_: bool,
+    run_tags: bool,
+    name: bool,
+    auto: bool,
+    notification: bool,
+    source: bool,
+    enabled: bool,
+    description: bool,
+    **kwargs,
+) -> None:
+    """Retrieve alerts list from Simvue server"""
+    kwargs |= {"filters": kwargs.get("filters" or [])}
+    alerts = simvue_cli.actions.get_alerts_list(**kwargs)
+    if not alerts:
+        return
+    columns = ["id"]
+
+    if name:
+        columns.append("name")
+    if run_tags:
+        columns.append("run_tags")
+    if description:
+        columns.append("description")
+    if notification:
+        columns.append("notification")
+    if enabled:
+        columns.append("enabled")
+    if auto:
+        columns.append("auto")
+    if source:
+        columns.append("source")
+
+    table = create_objects_display(
+        columns,
+        alerts,
+        plain_text=ctx.obj["plain"],
+        enumerate_=enumerate_,
+        format=table_format,
+    )
+    click.echo(table)
+
+
 @simvue_alert.command("create")
 @click.pass_context
 @click.argument("name", type=SimvueName)
@@ -645,8 +722,8 @@ def folder_list(
 ) -> None:
     """Retrieve folders list from Simvue server"""
     kwargs |= {"filters": kwargs.get("filters" or [])}
-    runs = simvue_cli.actions.get_folders_list(**kwargs)
-    if not runs:
+    folders = simvue_cli.actions.get_folders_list(**kwargs)
+    if not folders:
         return
     columns = ["id"]
 
@@ -663,7 +740,7 @@ def folder_list(
 
     table = create_objects_display(
         columns,
-        runs,
+        folders,
         plain_text=ctx.obj["plain"],
         enumerate_=enumerate_,
         format=table_format,

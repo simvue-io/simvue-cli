@@ -195,3 +195,4 @@ Server response can be check using the `ping` command:
 ```sh
 simvue ping
 ```
+

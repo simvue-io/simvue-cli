@@ -106,6 +106,16 @@ def test_run_creation(state: str) -> None:
         sv_cli.simvue,
         [
             "run",
+            "metadata",
+            run_id,
+            '{"x": "a value"}'
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "run",
             "close" if state != "abort" else "abort",
             run_id
         ]
@@ -170,6 +180,26 @@ def test_log_events(create_plain_run: tuple[simvue.Run, dict]) -> None:
     client = simvue.Client()
     assert (results := client.get_events(run.id))
     assert len(results) == 5
+
+
+def test_alert_list(create_test_run: tuple[simvue.Run, dict]) -> None:
+    _, run_data = create_test_run
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "alert",
+            "list",
+            "--source",
+            "--name",
+            "--auto",
+            "--run-tags",
+           "--enabled",
+            "--format=simple"
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    assert "alert_0" in result.output
 
 
 def test_user_alert() -> None:
@@ -392,7 +422,7 @@ def test_storage() -> None:
             "--tenant-usable",
             "--enabled",
             "--count=20",
-        ]
+        ],
     )
     assert result.exit_code == 0, result.output
     _storage_id: str = result.stdout.split()[0]
@@ -512,4 +542,13 @@ done
     assert client.get_metric_values(run_ids=[run_data.id], metric_names=["x", "y"], xaxis="step")
 
 
+def test_whoami() -> None:
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "whoami"
+        ]
+    )
+    assert result.exit_code == 0, result.stdout
 
