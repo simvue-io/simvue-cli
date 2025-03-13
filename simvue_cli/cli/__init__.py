@@ -26,7 +26,7 @@ import importlib.metadata
 import tabulate
 import requests
 import simvue as simvue_client
-from simvue.api.objects import Run, Folder, S3Storage, Tag, Storage
+from simvue.api.objects import Alert, Run, Folder, S3Storage, Tag, Storage
 from simvue.api.objects.administrator import User, Tenant
 from simvue.exception import ObjectNotFoundError
 
@@ -477,7 +477,7 @@ def purge_simvue(ctx) -> None:
         logger.info(f"Removing '{user_simvue_directory}'")
         shutil.rmtree(user_simvue_directory)
         local_files_exist = True
-    if (global_simvue_file := pathlib.Path().home().joinpath(".simvue.ini")).exists():
+    if (global_simvue_file := pathlib.Path().home().joinpath(".simvue.toml")).exists():
         logger.info(f"Removing global Simvue configuration '{global_simvue_file}'")
         global_simvue_file.unlink()
         local_files_exist = True
@@ -600,6 +600,79 @@ def create_alert(
     )
     alert_id = result.id
     click.echo(alert_id if ctx.obj["plain"] else click.style(alert_id))
+
+
+@simvue_alert.command("remove")
+@click.pass_context
+@click.argument("alert_ids", type=str, nargs=-1, required=False)
+@click.option(
+    "-i",
+    "--interactive",
+    help="Prompt for confirmation on removal",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+def delete_alert(ctx, alert_ids: list[str] | None, interactive: bool) -> None:
+    """Remove a alert from the Simvue server"""
+    if not alert_ids:
+        alert_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            alert_ids += [k.strip() for k in line.split(" ")]
+
+    for alert_id in alert_ids:
+        try:
+            simvue_cli.actions.get_alert(alert_id)
+        except (ObjectNotFoundError, RuntimeError):
+            error_msg = f"alert '{alert_id}' not found"
+            if ctx.obj["plain"]:
+                print(error_msg)
+            else:
+                click.secho(error_msg, fg="red", bold=True)
+            sys.exit(1)
+
+        if interactive:
+            remove = click.confirm(f"Remove alert '{alert_id}'?")
+            if not remove:
+                continue
+
+        try:
+            simvue_cli.actions.delete_alert(alert_id)
+        except ValueError as e:
+            click.echo(
+                e.args[0]
+                if ctx.obj["plain"]
+                else click.style(e.args[0], fg="red", bold=True)
+            )
+            sys.exit(1)
+
+        response_message = f"alert '{alert_id}' removed successfully."
+
+        if ctx.obj["plain"]:
+            print(response_message)
+        else:
+            click.secho(response_message, bold=True, fg="green")
+
+
+@simvue_alert.command("json")
+@click.argument("alert_id", required=False)
+def get_alert_json(alert_id: str) -> None:
+    """Retrieve alert information from Simvue server
+
+    If no alert ID is provided the input is read from stdin
+    """
+    if not alert_id:
+        alert_id = input()
+
+    try:
+        alert: Alert = simvue_cli.actions.get_alert(alert_id)
+        alert_info = alert.to_dict()
+        click.echo(json.dumps({k: v for k, v in alert_info.items()}, indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve alert '{alert_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
 
 
 @simvue.command("monitor")
@@ -865,6 +938,25 @@ def admin(ctx) -> None:
 @click.pass_context
 def simvue_tenant(ctx) -> None:
     """Manager server tenants"""
+
+
+@simvue_tenant.command("json")
+@click.argument("tenant_id", required=False)
+def get_tenant_json(tenant_id: str) -> None:
+    """Retrieve tenant information from Simvue server
+
+    If no tenant ID is provided the input is read from stdin
+    """
+    if not tenant_id:
+        tenant_id = input()
+
+    try:
+        tenant: Tenant = simvue_cli.actions.get_tenant(tenant_id)
+        tenant_info = tenant.to_dict()
+        click.echo(json.dumps({k: v for k, v in tenant_info.items()}, indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve tenant '{tenant_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
 
 
 @simvue_tenant.command("add")
@@ -1135,6 +1227,25 @@ def list_user(
         format=table_format,
     )
     click.echo(table)
+
+
+@user.command("json")
+@click.argument("user_id", required=False)
+def get_user_json(user_id: str) -> None:
+    """Retrieve user information from Simvue server
+
+    If no user ID is provided the input is read from stdin
+    """
+    if not user_id:
+        user_id = input()
+
+    try:
+        user: User = simvue_cli.actions.get_user(user_id)
+        user_info = user.to_dict()
+        click.echo(json.dumps({k: v for k, v in user_info.items()}, indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve user '{user_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
 
 
 @user.command("add")

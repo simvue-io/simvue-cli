@@ -61,10 +61,10 @@ def _check_run_exists(run_id: str) -> tuple[pathlib.Path, Run]:
 
     try:
         run = Run(identifier=run_id)
-    except StopIteration:
+    except StopIteration as e:
         if run_shelf_file.exists():
             run_shelf_file.unlink()
-        raise ValueError(f"Run '{run_id}' does not exist.")
+        raise ValueError(f"Run '{run_id}' does not exist.") from e
 
     if (status := run.status) in ("lost", "terminated", "completed", "failed"):
         if run_shelf_file.exists():
@@ -518,6 +518,11 @@ def get_folder(folder_id: str) -> Folder:
     return Folder(identifier=folder_id)
 
 
+def get_alert(alert_id: str) -> Alert:
+    """Retrieve a alert from the server"""
+    return Alert(identifier=alert_id)
+
+
 def get_tag(tag_id: str) -> Tag:
     """Retrieve a tag from the server"""
     return Tag(identifier=tag_id)
@@ -543,6 +548,12 @@ def delete_user(user_id: str) -> None:
     """Delete a given user from the Simvue server"""
     _user = get_user(user_id)
     _user.delete()
+
+
+def delete_alert(alert_id: str) -> None:
+    """Delete a given alert from the Simvue server"""
+    _alert = get_alert(alert_id)
+    _alert.delete()
 
 
 def create_environment(

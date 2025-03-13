@@ -17,7 +17,7 @@ jobs:
   test_build:
     name: Test CLI
     timeout-minutes: 20
-    runs-on: ["ubuntu-latest"]
+    runs-on: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
       - name: Retrieve Code
         uses: actions/checkout@v4
@@ -25,12 +25,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Install Poetry
-        run: pip install poetry
-      - name: Run Tests
+      - name: Install Dependencies
         run: |
-          export SIMVUE_URL=${{ secrets.SIMVUE_URL }}
-          export SIMVUE_TOKEN=${{ secrets.SIMVUE_TOKEN }}
-          poetry install
-          poetry run pytest -x --cov=simvue_cli --cov-report=term
+          python -m pip install poetry
+          poetry self add poetry-plugin-export
+          poetry export -f requirements.txt --with dev -o requirements.txt --all-extras
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+          python -m pip install .
+      - name: Run Tests
+        env:
+          SIMVUE_URL: ${{ secrets.SIMVUE_URL }}
+          SIMVUE_TOKEN: ${{ secrets.SIMVUE_TOKEN }}
+        run: |
+          python -m pytest -x --cov=simvue_cli --cov-report=term --cov-report=xml -c /dev/null -p no:warnings -v
 

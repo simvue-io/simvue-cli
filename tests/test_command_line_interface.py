@@ -2,6 +2,9 @@ import random
 import string
 from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
+from simvue.api.objects import Alert, Storage, Tenant, User
+from simvue.client import ObjectNotFoundError
+from simvue.run import RunObject
 import tabulate
 import simvue
 import time
@@ -124,6 +127,17 @@ def test_run_creation(state: str) -> None:
     time.sleep(2)
     run_data = client.get_run(run_id)
     assert run_data.status == ("terminated" if state == "abort" else "completed")
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "run",
+            "remove",
+            run_id
+        ]
+    )
+    assert result.exit_code == 0, result.stdout
+    with pytest.raises(ObjectNotFoundError):
+        RunObject(identifier=run_id)
 
 
 @pytest.mark.parametrize(
@@ -212,10 +226,29 @@ def test_user_alert() -> None:
             "test/test_user_alert"
         ]
     )
+    _alert = result.output.strip()
     assert result.exit_code == 0, result.output
     time.sleep(1.0)
-    client = simvue.Client()
-    client.delete_alert(result.output.strip())
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "alert",
+            "json",
+            _alert,
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "alert",
+            "remove",
+            _alert
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    with pytest.raises(ObjectNotFoundError):
+        Alert(identifier=_alert)
 
 
 def test_server_ping() -> None:
@@ -406,6 +439,8 @@ def test_add_remove_storage() -> None:
         ]
     )
     assert result.exit_code == 0, result.output
+    with pytest.raises(ObjectNotFoundError):
+        Storage(identifier=storage_id)
 
 
 def test_storage() -> None:
@@ -478,8 +513,28 @@ def test_user_and_tenant() -> None:
         [
             "admin",
             "user",
+            "json",
+            _user_id
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "admin",
+            "user",
             "remove",
             _user_id
+        ]
+    )
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "admin",
+            "tenant",
+            "json",
+            _tenant_id
         ]
     )
     assert result.exit_code == 0, result.output
@@ -493,6 +548,10 @@ def test_user_and_tenant() -> None:
         ]
     )
     assert result.exit_code == 0, result.output
+    with pytest.raises(ObjectNotFoundError):
+        User(identifier=_user_id)
+    with pytest.raises(ObjectNotFoundError):
+        Tenant(identifier=_tenant_id)
 
 
 def test_simvue_monitor() -> None:
@@ -552,3 +611,27 @@ def test_whoami() -> None:
     )
     assert result.exit_code == 0, result.stdout
 
+
+def test_purge(monkeypatch) -> None:
+    with tempfile.TemporaryDirectory() as tempd:
+        monkeypatch.setattr(pathlib.Path, "home", lambda *_, **__: pathlib.Path(tempd))
+
+        # Sanity check
+        assert pathlib.Path.home() == (_test_dir := pathlib.Path(tempd))
+
+        _test_dir.joinpath(".simvue").mkdir()
+        _test_dir.joinpath(".simvue", "test_json.json").touch()
+        _test_dir.joinpath(".simvue.toml").touch()
+
+        runner = click.testing.CliRunner()
+        result = runner.invoke(
+            sv_cli.simvue,
+            [
+                "purge"
+            ]
+        )
+        assert result.exit_code == 0, result.stdout
+        assert f"{_test_dir.joinpath('.simvue')}" in result.stdout
+        assert f"{_test_dir.joinpath('.simvue.toml')}" in result.stdout
+        assert not _test_dir.joinpath(".simvue").exists()
+        assert not _test_dir.joinpath(".simvue.toml").exists()
