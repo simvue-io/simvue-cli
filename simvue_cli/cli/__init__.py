@@ -23,6 +23,7 @@ import contextlib
 import importlib.metadata
 
 
+from pandas import show_versions
 import tabulate
 import requests
 import simvue as simvue_client
@@ -252,9 +253,9 @@ def create_run(
 ) -> None:
     """Initialise a new Simvue run"""
     run_params |= {"running": not create_only, "tags": list(tag) if tag else None}
-    run_id: str = simvue_cli.actions.create_simvue_run(**run_params)
+    run: Run = simvue_cli.actions.create_simvue_run(**run_params)
 
-    click.echo(run_id if ctx.obj["plain"] else click.style(run_id))
+    click.echo(run.id if ctx.obj["plain"] else click.style(run.id))
 
 
 @simvue_run.command("remove")
@@ -410,6 +411,15 @@ def update_metadata(run_id: str, metadata: dict) -> None:
 @click.option("--description", is_flag=True, help="Show description")
 @click.option("--status", is_flag=True, help="Show status")
 @click.option("--folder", is_flag=True, help="Show folder")
+@click.option(
+    "--sort-by",
+    help="Specify columns to sort by",
+    multiple=True,
+    default=["created"],
+    type=click.Choice(["created", "started", "endtime", "modified", "name"]),
+    show_default=True,
+)
+@click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 def list_runs(
     ctx,
     format: str,
@@ -514,6 +524,13 @@ def simvue_alert(ctx) -> None:
     show_default=True,
 )
 @click.option(
+    "--offset",
+    type=int,
+    help="Start index for results",
+    default=None,
+    show_default=None,
+)
+@click.option(
     "--count",
     type=int,
     help="Maximum number of alerts to retrieve",
@@ -524,11 +541,21 @@ def simvue_alert(ctx) -> None:
 @click.option("--run-tags", is_flag=True, help="Show tags")
 @click.option("--auto", is_flag=True, help="Show if run tag auto-assign is enabled")
 @click.option("--notification", is_flag=True, help="Show notification setting")
+@click.option("--created", is_flag=True, help="Show created timestamp")
 @click.option("--source", is_flag=True, help="Show alert source")
 @click.option("--enabled", is_flag=True, help="Show if alert enabled")
 @click.option("--abort", is_flag=True, help="Show alert if alert can abort runs")
 @click.option("--name", is_flag=True, help="Show names")
 @click.option("--description", is_flag=True, help="Show description")
+@click.option(
+    "--sort-by",
+    help="Specify columns to sort by",
+    multiple=True,
+    default=["created"],
+    type=click.Choice(["created", "name"]),
+    show_default=True,
+)
+@click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 def alert_list(
     ctx,
     table_format: str,
@@ -540,6 +567,7 @@ def alert_list(
     source: bool,
     enabled: bool,
     description: bool,
+    created: bool,
     **kwargs,
 ) -> None:
     """Retrieve alerts list from Simvue server"""
@@ -551,6 +579,8 @@ def alert_list(
 
     if name:
         columns.append("name")
+    if created:
+        columns.append("created")
     if run_tags:
         columns.append("run_tags")
     if description:
@@ -711,6 +741,9 @@ def get_alert_json(alert_id: str) -> None:
     show_default=True,
     type=str,
 )
+@click.option(
+    "--environment", help="Include environment in metadata", is_flag=True, default=False
+)
 def monitor(ctx, tag: tuple[str, ...] | None, delimiter: str, **run_params) -> None:
     """Monitor stdin for delimited lines sending as metrics"""
     metric_labels: list[str] = []
@@ -782,6 +815,15 @@ def simvue_folder(ctx) -> None:
 @click.option("--created", is_flag=True, help="Show created timestamp")
 @click.option("--name", is_flag=True, help="Show names")
 @click.option("--description", is_flag=True, help="Show description")
+@click.option(
+    "--sort-by",
+    help="Specify columns to sort by",
+    multiple=True,
+    default=["created"],
+    type=click.Choice(["created", "modified", "path"]),
+    show_default=True,
+)
+@click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 def folder_list(
     ctx,
     table_format: str,
@@ -874,6 +916,15 @@ def simvue_tag(ctx) -> None:
 )
 @click.option("--name", is_flag=True, help="Show names")
 @click.option("--color", is_flag=True, help="Show hex colors")
+@click.option(
+    "--sort-by",
+    help="Specify columns to sort by",
+    multiple=True,
+    default=["created"],
+    type=click.Choice(["created", "name"]),
+    show_default=True,
+)
+@click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 def tag_list(
     ctx,
     count: int,
@@ -988,8 +1039,8 @@ def get_tenant_json(tenant_id: str) -> None:
 )
 def add_tenant(ctx, **kwargs) -> None:
     """Add a tenant to the Simvue server"""
-    tenant_id: str = simvue_cli.actions.create_simvue_tenant(**kwargs)
-    click.echo(tenant_id if ctx.obj["plain"] else click.style(tenant_id))
+    tenant: Tenant = simvue_cli.actions.create_simvue_tenant(**kwargs)
+    click.echo(tenant.id if ctx.obj["plain"] else click.style(tenant.id))
 
 
 @simvue_tenant.command("remove")
@@ -1285,8 +1336,8 @@ def get_user_json(user_id: str) -> None:
 )
 @click.option("--welcome", is_flag=True, default=False, help="display welcome message")
 def add_user(ctx, **kwargs) -> None:
-    """Add a user to the Simvue server"""
-    click.echo(simvue_cli.actions.create_simvue_user(**kwargs))
+    user: User = simvue_cli.actions.create_simvue_user(**kwargs)
+    click.echo(user.id if ctx.obj["plain"] else click.style(user.id))
 
 
 @user.command("remove")
@@ -1426,7 +1477,8 @@ def simvue_storage_add(ctx) -> None:
 )
 @click.pass_context
 def add_s3_storage(ctx, **kwargs) -> None:
-    click.echo(simvue_cli.actions.create_simvue_s3_storage(**kwargs))
+    storage: S3Storage = simvue_cli.actions.create_simvue_s3_storage(**kwargs)
+    click.echo(storage.id if ctx.obj["plain"] else click.style(storage.id))
 
 
 @simvue_storage.command("json")
@@ -1646,6 +1698,15 @@ def simvue_artifact(ctx):
 @click.option("--checksum", is_flag=True, help="Show artifact checksum")
 @click.option("--name", is_flag=True, help="Show artifact name")
 @click.option("--size", is_flag=True, help="Show artifact size")
+@click.option(
+    "--sort-by",
+    help="Specify columns to sort by",
+    multiple=True,
+    default=["created"],
+    type=click.Choice(["created", "name"]),
+    show_default=True,
+)
+@click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 @click.pass_context
 def artifact_list(
     ctx,

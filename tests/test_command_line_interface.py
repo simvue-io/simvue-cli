@@ -54,7 +54,7 @@ def test_runs_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
         [
             "run",
             "list",
-            f"--format=simple"
+            "--format=simple"
         ]
     )
     assert result.exit_code == 0, result.output
@@ -76,7 +76,7 @@ def test_runs_json(create_test_run: tuple[simvue.Run, dict]) -> None:
     assert result.exit_code == 0, result.output
     json_data = json.loads(result.output.replace("'", '"'))
     assert isinstance(json_data, dict), f"Expected dictionary got '{result.output}'"
-    assert json_data.get("tags") == run_data["tags"]
+    assert sorted(json_data.get("tags")) == sorted(run_data["tags"])
 
 
 @pytest.mark.parametrize(
@@ -208,8 +208,9 @@ def test_alert_list(create_test_run: tuple[simvue.Run, dict]) -> None:
             "--name",
             "--auto",
             "--run-tags",
-           "--enabled",
-            "--format=simple"
+            "--enabled",
+            "--format=simple",
+            "--count=100"
         ]
     )
     assert result.exit_code == 0, result.output

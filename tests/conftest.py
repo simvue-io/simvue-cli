@@ -1,9 +1,11 @@
 import simvue.run as sv_run
 import os
 import uuid
+import pathlib
 import tempfile
 import pytest
 import time
+import simvue.metadata
 import json
 import typing
 
@@ -16,7 +18,11 @@ def create_plain_run(request) -> typing.Generator[typing.Tuple[sv_run.Run, dict]
 
 
 @pytest.fixture
-def create_test_run(request) -> typing.Generator[typing.Tuple[sv_run.Run, dict], None, None]:
+def create_test_run(request, monkeypatch) -> typing.Generator[typing.Tuple[sv_run.Run, dict], None, None]:
+    def testing_exit(status: int) -> None:
+        raise SystemExit(status)
+    monkeypatch.setattr(os, "_exit", testing_exit)
+
     with sv_run.Run() as run:
         yield run, setup_test_run(run, True, request)
 

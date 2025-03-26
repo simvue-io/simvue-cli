@@ -19,7 +19,7 @@ dependencies = [
     "toml (>=0.10.2,<0.11.0)",
     "regex (>=2024.11.6,<2025.0.0)",
     "requests (>=2.32.3,<3.0.0)",
-    "simvue (>=2.0.0)"
+    "simvue @ git+https://github.com/simvue-io/python-api@dev",
 ]
 
 [project.scripts]
@@ -44,6 +44,7 @@ build-backend = "poetry.core.masonry.api"
 pytest = "^8.3.4"
 pytest-cov = "^6.0.0"
 pytest-sugar = "^1.0.0"
+pytest-xdist = "^3.6.1"
 
 
 [tool.poetry.group.lint.dependencies]

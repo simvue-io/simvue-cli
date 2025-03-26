@@ -11,8 +11,10 @@ __date__ = "2024-09-09"
 import io
 import pathlib
 import json
+import sys
 import typing
 import time
+from simvue.exception import ObjectNotFoundError
 import toml
 import venv
 import shutil
@@ -61,7 +63,7 @@ def _check_run_exists(run_id: str) -> tuple[pathlib.Path, Run]:
 
     try:
         run = Run(identifier=run_id)
-    except StopIteration as e:
+    except ObjectNotFoundError as e:
         if run_shelf_file.exists():
             run_shelf_file.unlink()
         raise ValueError(f"Run '{run_id}' does not exist.") from e
@@ -94,7 +96,7 @@ def create_simvue_run(
     timeout: int | None,
     retention: int | None,
     environment: bool,
-) -> str | None:
+) -> Run | None:
     """Create and initialise a new Simvue run
 
     Parameters
@@ -120,8 +122,8 @@ def create_simvue_run(
     Returns
     -------
 
-    str | None
-        Simvue run ID if successful else None
+    Run | None
+        Simvue run if successful else None
     """
     if folder != "/":
         try:
@@ -156,7 +158,7 @@ def create_simvue_run(
             indent=2,
         )
 
-    return _id
+    return _run
 
 
 def log_metrics(run_id: str, metrics: dict[str, int | float]) -> None:
@@ -291,25 +293,36 @@ def user_info() -> dict:
     return Stats().whoami()
 
 
-def get_runs_list(**kwargs) -> typing.Generator[tuple[str, Run], None, None]:
+def get_runs_list(
+    sort_by: list[str], reverse: bool, **kwargs
+) -> typing.Generator[tuple[str, Run], None, None]:
     """Retrieve list of Simvue runs"""
-    return Run.get(**kwargs)
+    _sorting: list[dict[str, str]] = [
+        {"column": c, "descending": not reverse} for c in sort_by
+    ]
+    return Run.get(sorting=_sorting, **kwargs)
 
 
 def get_alerts_list(
-    **kwargs,
+    sort_by: list[str], reverse: bool, **kwargs
 ) -> typing.Generator[
     tuple[str, MetricsRangeAlert | MetricsThresholdAlert | EventsAlert | UserAlert],
     None,
     None,
 ]:
     """Retrieve list of Simvue alerts"""
-    return Alert.get(**kwargs)
+    _sorting: list[dict[str, str]] = [
+        {"column": c, "descending": not reverse} for c in sort_by
+    ]
+    return Alert.get(sorting=_sorting, **kwargs)
 
 
-def get_tag_list(**kwargs) -> None:
+def get_tag_list(sort_by: list[str], reverse: bool, **kwargs) -> None:
     """Retrieve list of Simvue tags"""
-    return Tag.get(**kwargs)
+    _sorting: list[dict[str, str]] = [
+        {"column": c, "descending": not reverse} for c in sort_by
+    ]
+    return Tag.get(sorting=_sorting, **kwargs)
 
 
 def get_storages_list(**kwargs) -> typing.Generator[tuple[str, Storage], None, None]:
@@ -317,14 +330,14 @@ def get_storages_list(**kwargs) -> typing.Generator[tuple[str, Storage], None, N
     return Storage.get(**kwargs)
 
 
-def get_storage_list(**kwargs) -> None:
-    """Retrieve list of Simvue storages"""
-    return Storage.get(**kwargs)
-
-
-def get_folders_list(**kwargs) -> None:
-    """Retrieve list of Simvue runs"""
-    return Folder.get(**kwargs)
+def get_folders_list(
+    sort_by: list[str], reverse: bool, **kwargs
+) -> typing.Generator[tuple[str, Run], None, None]:
+    """Retrieve list of Simvue folders"""
+    _sorting: list[dict[str, str]] = [
+        {"column": c, "descending": not reverse} for c in sort_by
+    ]
+    return Folder.get(sorting=_sorting, **kwargs)
 
 
 def get_tenants_list(**kwargs) -> typing.Generator[tuple[str, Tenant], None, None]:
@@ -337,9 +350,14 @@ def get_users_list(**kwargs) -> typing.Generator[tuple[str, User], None, None]:
     return User.get(**kwargs)
 
 
-def get_artifacts_list(**kwargs) -> typing.Generator[tuple[str, Artifact], None, None]:
+def get_artifacts_list(
+    sort_by: list[str], reverse: bool, **kwargs
+) -> typing.Generator[tuple[str, Artifact], None, None]:
     """Retrieve list of Simvye artifacts"""
-    return Artifact.get(**kwargs)
+    _sorting: list[dict[str, str]] = [
+        {"column": c, "descending": not reverse} for c in sort_by
+    ]
+    return Artifact.get(sorting=_sorting, **kwargs)
 
 
 def get_run(run_id: str) -> Run:
@@ -370,7 +388,7 @@ def create_simvue_s3_storage(
     access_key_file: io.BytesIO,
     block_tenant: bool,
     **kwargs,
-) -> str:
+) -> S3Storage:
     _secret_key: str = access_key_file.read()
     _storage = S3Storage.new(
         is_enabled=not disable,
@@ -380,7 +398,7 @@ def create_simvue_s3_storage(
         **kwargs,
     )
     _storage.commit()
-    return _storage.id
+    return _storage
 
 
 def create_user_alert(
@@ -424,7 +442,7 @@ def create_simvue_user(
     read_only: bool,
     tenant: str,
     welcome: bool,
-) -> str:
+) -> User:
     """Create a new Simvue user on the server.
 
     Parameters
@@ -451,8 +469,8 @@ def create_simvue_user(
 
     Returns
     -------
-    str
-        the unique identifier for the user
+    User
+        the user object
     """
     _user = User.new(
         username=username,
@@ -467,7 +485,7 @@ def create_simvue_user(
     )
     _user.commit()
 
-    return _user.id
+    return _user
 
 
 def create_simvue_tenant(
@@ -476,7 +494,7 @@ def create_simvue_tenant(
     max_runs: int,
     max_request_rate: int,
     max_data_volume: int,
-) -> str:
+) -> Tenant:
     """Create a Tenant on the simvue server.
 
     Parameters
@@ -494,8 +512,8 @@ def create_simvue_tenant(
 
     Returns
     -------
-    str
-        the unique identifer for the user
+    Tenant
+        the tenant object
     """
     _tenant = Tenant.new(
         name=name,
@@ -505,7 +523,7 @@ def create_simvue_tenant(
         max_data_volume=max_data_volume or 0,
     )
     _tenant.commit()
-    return _tenant.id
+    return _tenant
 
 
 def get_tenant(tenant_id: str) -> Tenant:
@@ -617,4 +635,11 @@ def create_environment(
 
         toml.dump(_toml_data, _toml_file.open("w"))
 
-        subprocess.run([_cargo_path, "build"], cwd=venv_directory)
+        _process = subprocess.Popen(
+            [_cargo_path, "build"],
+            cwd=venv_directory,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        for c in iter(lambda: _process.stdout.read(1), b""):
+            sys.stdout.buffer.write(c)
