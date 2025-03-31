@@ -3,11 +3,35 @@ name = "simvue-cli"
 version = "1.0.0"
 description = "Command Line Interface for interaction with a Simvue v3 server"
 authors = [
-    {name = "Kristian Zarębski",email = "kristian.zarebski@ukaea.uk"}
+    {name = "Simvue Development Team", email = "info@simvue.io"}
 ]
 license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: Unix",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Monitoring",
+    "Topic :: Utilities",
+    "Typing :: Typed"
+]
+keywords = [
+    "tracking",
+    "monitoring",
+    "metrics",
+    "alerting",
+    "metrics-gathering"
+]
 dependencies = [
     "click-option-group>=0.5.7",
     "click>=8.1.8",
@@ -19,6 +43,11 @@ dependencies = [
     "regex>=2024.11.6",
     "requests>=2.32.3",
 ]
+
+[project.urls]
+homepage = "https://simvue.io"
+repository = "https://github.com/simvue-io/simvue-cli"
+documentation = "https://docs.simvue.io"
 
 [project.scripts]
 simvue = "simvue_cli.cli:simvue"
@@ -33,6 +62,10 @@ addopts = "--no-cov"
 testpaths = [
     "tests"
 ]
+markers = [
+  "unix: UNIX only tests"
+]
+
 
 [build-system]
 requires = ["hatchling"]
@@ -46,3 +79,6 @@ dev = [
 lint = [
     "ruff>=0.11.2",
 ]
+
+[tool.mypy]
+ignore_missing_imports = true

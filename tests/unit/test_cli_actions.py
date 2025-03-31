@@ -86,6 +86,7 @@ def test_get_server_version() -> None:
     assert re.findall(r"\d+\.\d+\.\d+", (_server_version := f"{simvue_cli.actions.get_server_version()}")), f"Got {_server_version} for server version"
 
 
+@pytest.mark.unix
 def test_storage() -> None:
     name = "simvue_cli_test_storage"
     endpoint_url="https://not-a-real-url.io"

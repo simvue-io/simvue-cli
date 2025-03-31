@@ -392,6 +392,7 @@ def test_user_list() -> None:
     assert result.exit_code == 0, result.output
 
 
+@pytest.mark.unix
 def test_add_remove_storage() -> None:
     name = "simvue_cli_test_storage"
     runner = click.testing.CliRunner()
@@ -555,6 +556,7 @@ def test_user_and_tenant() -> None:
         Tenant(identifier=_tenant_id)
 
 
+@pytest.mark.unix
 def test_simvue_monitor() -> None:
     with tempfile.NamedTemporaryFile(suffix=".sh") as out_f:
         with open(out_f.name, "w", encoding="utf-8") as f_write:
