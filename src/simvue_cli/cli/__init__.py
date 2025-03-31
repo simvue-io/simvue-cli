@@ -749,11 +749,11 @@ def monitor(ctx, tag: tuple[str, ...] | None, delimiter: str, **run_params) -> N
     metric_labels: list[str] = []
     run_params |= {"tags": list(tag) if tag else None}
 
-    run_id: str | None = simvue_cli.actions.create_simvue_run(
+    run: Run | None = simvue_cli.actions.create_simvue_run(
         timeout=None, running=True, **run_params
     )
 
-    if not run_id:
+    if not run:
         raise click.Abort("Failed to create run")
 
     try:
@@ -764,7 +764,7 @@ def monitor(ctx, tag: tuple[str, ...] | None, delimiter: str, **run_params) -> N
                 continue
             try:
                 simvue_cli.actions.log_metrics(
-                    run_id, dict(zip(metric_labels, [float(i) for i in line]))
+                    run.id, dict(zip(metric_labels, [float(i) for i in line]))
                 )
             except (RuntimeError, ValueError) as e:
                 if ctx.obj["plain"]:
@@ -772,11 +772,11 @@ def monitor(ctx, tag: tuple[str, ...] | None, delimiter: str, **run_params) -> N
                 else:
                     click.secho(e, fg="red", bold=True)
                 sys.exit(1)
-        click.echo(run_id)
+        click.echo(run.id)
     except KeyboardInterrupt as e:
-        simvue_cli.actions.set_run_status(run_id, "terminated")
+        simvue_cli.actions.set_run_status(run.id, "terminated")
         raise click.Abort from e
-    simvue_cli.actions.set_run_status(run_id, "completed")
+    simvue_cli.actions.set_run_status(run.id, "completed")
 
 
 @simvue.group("folder")

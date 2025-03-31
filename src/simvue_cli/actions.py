@@ -77,10 +77,14 @@ def _check_run_exists(run_id: str) -> tuple[pathlib.Path, Run]:
     # retrieve last time step, and the start time of the run
     if not run_shelf_file.exists():
         out_data = {"step": 0, "start_time": time.time()}
-        if step := max(metric.get("step", 0) for _, metric in run.metrics or {}):
-            out_data["step"] = step
-        if time_now := min(metric.get("time", 0) for _, metric in run.metrics or {}):
-            out_data["start_time"] = time_now
+        _metric_steps: list[int] = [
+            metric.get("step", 0) for _, metric in run.metrics or []
+        ]
+        _times: list[int] = [metric.get("time", 0) for _, metric in run.metrics or []]
+        if _metric_steps:
+            out_data["step"] = max(_metric_steps)
+        if _times:
+            out_data["start_time"] = min(_times)
         with run_shelf_file.open("w") as out_f:
             json.dump(out_data, out_f)
 
@@ -275,7 +279,7 @@ def get_server_version() -> typing.Union[str, int]:
         failed HTTP request
     """
     _url, _headers = get_url_and_headers()
-    response = sv_api.get(f"{_url}/api/version", headers=_headers)
+    response = sv_api.get(f"{_url}/version", headers=_headers)
     if response.status_code != 200:
         return response.status_code
 

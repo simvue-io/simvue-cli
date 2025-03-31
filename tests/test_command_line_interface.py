@@ -569,7 +569,7 @@ for i in {1..10}; do
 done
                 """
             )
-        click_script = pathlib.Path(__file__).parents[1].joinpath("simvue_cli", "cli", "__init__.py")
+        click_script = pathlib.Path(__file__).parents[1].joinpath("src", "simvue_cli", "cli", "__init__.py")
         with subprocess.Popen(
             ["bash", out_f.name],
             stdout=subprocess.PIPE,
