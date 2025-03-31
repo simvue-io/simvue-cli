@@ -35,4 +35,3 @@ jobs:
           SIMVUE_TOKEN: ${{ secrets.SIMVUE_TOKEN }}
         run: |
           python -m pytest -x --cov=simvue_cli --cov-report=term --cov-report=xml -c /dev/null -p no:warnings -v
-

@@ -24,7 +24,7 @@ dependencies = [
 simvue = "simvue_cli.cli:simvue"
 
 [tool.ruff]
-lint.extend-select = ["C901", "T201"]
+lint.extend-select = ["C901"]
 lint.mccabe.max-complexity = 11
 extend-exclude = ["tests"]
 

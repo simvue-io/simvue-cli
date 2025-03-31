@@ -22,8 +22,6 @@ import logging
 import contextlib
 import importlib.metadata
 
-
-from pandas import show_versions
 import tabulate
 import requests
 import simvue as simvue_client
@@ -472,7 +470,7 @@ def get_run_json(run_id: str) -> None:
     try:
         run: Run = simvue_cli.actions.get_run(run_id)
         run_info = run.to_dict()
-        click.echo(json.dumps({k: v for k, v in run_info.items()}, indent=2))
+        click.echo(json.dumps(dict(run_info.items()), indent=2))
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
@@ -699,7 +697,7 @@ def get_alert_json(alert_id: str) -> None:
     try:
         alert: Alert = simvue_cli.actions.get_alert(alert_id)
         alert_info = alert.to_dict()
-        click.echo(json.dumps({k: v for k, v in alert_info.items()}, indent=2))
+        click.echo(json.dumps(dict(alert_info.items()), indent=2))
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve alert '{alert_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
@@ -876,7 +874,7 @@ def get_folder_json(folder_id: str) -> None:
     try:
         folder: Folder = simvue_cli.actions.get_folder(folder_id)
         folder_info = folder.to_dict()
-        click.echo(json.dumps({k: v for k, v in folder_info.items()}, indent=2))
+        click.echo(json.dumps(dict(folder_info.items()), indent=2))
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
@@ -972,7 +970,7 @@ def get_tag_json(tag_id: str) -> None:
     try:
         tag: Tag = simvue_cli.actions.get_tag(tag_id)
         tag_info = tag.to_dict()
-        click.echo(json.dumps({k: v for k, v in tag_info.items()}, indent=2))
+        click.echo(json.dumps(dict(tag_info.items()), indent=2))
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve tag '{tag_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
@@ -1004,7 +1002,7 @@ def get_tenant_json(tenant_id: str) -> None:
     try:
         tenant: Tenant = simvue_cli.actions.get_tenant(tenant_id)
         tenant_info = tenant.to_dict()
-        click.echo(json.dumps({k: v for k, v in tenant_info.items()}, indent=2))
+        click.echo(json.dumps(dict(tenant_info.items()), indent=2))
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve tenant '{tenant_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
@@ -1169,25 +1167,6 @@ def tenant_list(
     click.echo(table)
 
 
-@simvue_tenant.command("json")
-@click.argument("tenant_id", required=False)
-def get_tenant_json(tenant_id: str) -> None:
-    """Retrieve tenant information from Simvue server
-
-    If no tenant_ID is provided the input is read from stdin
-    """
-    if not tenant_id:
-        tenant_id = input()
-
-    try:
-        tenant: Tenant = simvue_cli.actions.get_tenant(tenant_id)
-        tenant_info = tenant.to_dict()
-        click.echo(json.dumps({k: v for k, v in tenant_info.items()}, indent=2))
-    except ObjectNotFoundError as e:
-        error_msg = f"Failed to retrieve tenant '{tenant_id}': {e.args[0]}"
-        click.echo(error_msg, fg="red", bold=True)
-
-
 @admin.group("user")
 @click.pass_context
 def user(ctx) -> None:
@@ -1293,7 +1272,7 @@ def get_user_json(user_id: str) -> None:
     try:
         user: User = simvue_cli.actions.get_user(user_id)
         user_info = user.to_dict()
-        click.echo(json.dumps({k: v for k, v in user_info.items()}, indent=2))
+        click.echo(json.dumps(dict(user_info.items()), indent=2))
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve user '{user_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
@@ -1394,25 +1373,6 @@ def delete_user(ctx, user_ids: list[str] | None, interactive: bool) -> None:
             click.secho(response_message, bold=True, fg="green")
 
 
-@user.command("json")
-@click.argument("user_id", required=False)
-def get_user_json(user_id: str) -> None:
-    """Retrieve user information from Simvue server
-
-    If no user_ID is provided the input is read from stdin
-    """
-    if not user_id:
-        user_id = input()
-
-    try:
-        user: User = simvue_cli.actions.get_user(user_id)
-        user_info = user.to_dict()
-        click.echo(json.dumps({k: v for k, v in user_info.items()}, indent=2))
-    except ObjectNotFoundError as e:
-        error_msg = f"Failed to retrieve user '{user_id}': {e.args[0]}"
-        click.echo(error_msg, fg="red", bold=True)
-
-
 @simvue.group("storage")
 @click.pass_context
 def simvue_storage(ctx):
@@ -1495,7 +1455,7 @@ def get_storage_json(ctx, storage_id: str) -> None:
     try:
         storage: Storage = simvue_cli.actions.get_storage(storage_id)
         storage_info = storage.to_dict()
-        click.echo(json.dumps({k: v for k, v in storage_info.items()}, indent=2))
+        click.echo(json.dumps(dict(storage_info.items()), indent=2))
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve storage '{storage_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
