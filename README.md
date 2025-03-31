@@ -2,6 +2,13 @@
 
 ![cli_image](https://raw.githubusercontent.com/simvue-io/simvue-cli/main/CLI_image.png)
 
+<div align="center">
+<a href="https://github.com/simvue-io/client/blob/main/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/simvue-io/client"/></a>
+<img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue">
+<a href="https://pypi.org/project/simvue-cli/" target="_blank"><img src="https://img.shields.io/pypi/v/simvue-cli.svg"/></a>
+<a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a>
+</div>
+
 Simvue CLI is a command line interface for interacting with a Simvue server instance. The tool is designed to aid in performing more basic operations compared to the Simvue Python API which should be used instead for more complicated parsing of data and execution of simulations.
 
 * [Modifying Simvue configuration](#modifying-simvue-configuration)
