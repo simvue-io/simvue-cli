@@ -9,6 +9,7 @@ __date__ = "2024-09-09"
 
 from simvue.factory.proxy import typing
 from simvue.api.objects.base import SimvueObject
+
 import tabulate
 import click
 import pydantic
@@ -141,7 +142,7 @@ COLUMN_FORMAT: dict[str, typing.Callable[[str | list[str]], str]] = {
 
 def create_objects_display(
     columns: list[str],
-    objects: typing.Generator[tuple[str, SimvueObject]],
+    objects: typing.Generator[tuple[str, SimvueObject], None, None],
     plain_text: bool,
     enumerate_: bool,
     format: str | None,
