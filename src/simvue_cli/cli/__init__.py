@@ -535,7 +535,6 @@ def simvue_alert(ctx) -> None:
     default=20,
     show_default=True,
 )
-@click.option("--path", is_flag=True, help="Show path")
 @click.option("--run-tags", is_flag=True, help="Show tags")
 @click.option("--auto", is_flag=True, help="Show if run tag auto-assign is enabled")
 @click.option("--notification", is_flag=True, help="Show notification setting")

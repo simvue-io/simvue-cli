@@ -36,9 +36,10 @@ STATUS_FORMAT: dict[str, str] = {
     "running": "blue",
     "failed": "red",
     "completed": "green",
-    "lost": "yellow",
+    "lost": "orange",
     "created": "white",
     "N/A": "grey",
+    "terminated": "red",
 }
 
 CLICK_COLORS: dict[str, str] = {
