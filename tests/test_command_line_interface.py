@@ -1,5 +1,7 @@
+from logging import critical
 import random
 import string
+import typing
 from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
 from simvue.api.objects import Alert, Storage, Tenant, User
@@ -250,6 +252,31 @@ def test_user_alert() -> None:
     assert result.exit_code == 0, result.output
     with pytest.raises(ObjectNotFoundError):
         Alert(identifier=_alert)
+
+
+@pytest.mark.parametrize("status", ("ok", "critical"))
+def test_user_alert_trigger(create_plain_run: tuple[simvue.Run, dict], status: typing.Literal["ok", "critical"]) -> None:
+    run, _ = create_plain_run
+    _alert_id = run.create_user_alert(
+        name="test_user_alert_triggered_alert_cli",
+        description="Test alert for CLI triggering",
+        trigger_abort=True
+    )
+    _command = [
+        "alert",
+        "trigger",
+        run.id,
+        _alert_id
+    ]
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        _command + ([] if status == "critical" else ["--ok"])
+    )
+    assert result.exit_code == 0, result.output
+    _alert: UserAlert = Alert(_alert_id)
+    assert _alert.get_status(run.id) == status
+
 
 
 def test_server_ping() -> None:

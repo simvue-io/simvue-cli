@@ -436,6 +436,31 @@ def create_user_alert(
     return _alert
 
 
+def trigger_user_alert(
+    run_id: str, alert_id: str, status: typing.Literal["ok", "critical"]
+) -> None:
+    """Trigger a manually defined user alert.
+
+    Parameters
+    ----------
+    run_id: str
+        the unique identifier for the run to alert on
+    alert_id : str
+        the unique identifier for the alert
+    status: Literal['ok', 'critical']
+        the state to set the alert to
+
+    """
+    _alert = get_alert(alert_id=alert_id)
+
+    if not isinstance(_alert, UserAlert):
+        raise ValueError(f"Alert '{alert_id}' is not a user alert.")
+
+    _alert.read_only(False)
+    _alert.set_status(run_id=run_id, status=status)
+    _alert.commit()
+
+
 def create_simvue_user(
     username: str,
     email: str,

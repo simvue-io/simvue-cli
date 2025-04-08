@@ -2,12 +2,14 @@ import tempfile
 import time
 import re
 import pathlib
+import typing
 import pytest
 import uuid
 import os
 import simvue
 from simvue.api.objects import Alert, Run, Events, Storage, Tenant, User
 from simvue.exception import ObjectNotFoundError
+from simvue.run import UserAlert
 import simvue_cli.actions
 
 
@@ -162,3 +164,20 @@ def test_run_abort(create_test_run, monkeypatch) -> None:
     assert _run._status == "terminated"
 
 
+@pytest.mark.parametrize(
+    "status", ("ok", "critical")
+)
+def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status: typing.Literal["ok", "critical"]) -> None:
+    run, _ = create_plain_run
+    _alert_id = run.create_user_alert(
+        name="test_user_alert_triggered_alert",
+        description="Test alert for CLI triggering",
+        trigger_abort=True
+    )
+    simvue_cli.actions.trigger_user_alert(
+        run.id,
+        _alert_id,
+        status
+    )
+    _alert: UserAlert = Alert(_alert_id)
+    assert _alert.get_status(run.id) == status
