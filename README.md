@@ -27,6 +27,7 @@ Simvue CLI is a command line interface for interacting with a Simvue server inst
 * [Version information](#version-information)
 * [Plain output](#plain-output)
 * [Checking server status](#checking-server-status)
+* [Citation](#citation)
 
 ## Modifying Simvue configuration
 
@@ -202,3 +203,6 @@ Server response can be check using the `ping` command:
 ```sh
 simvue ping
 ```
+
+## Citation
+If using Simvue please cite under the information found on the [Python API](https://github.com/simvue-io/python-api) repository.
