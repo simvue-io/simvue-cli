@@ -504,6 +504,31 @@ def simvue_alert(ctx) -> None:
     pass
 
 
+@simvue_alert.command("trigger")
+@click.pass_context
+@click.argument("run_id")
+@click.argument("alert_id")
+@click.option(
+    "--ok",
+    "is_ok",
+    is_flag=True,
+    help="Set alert to status 'ok' as opposed to critical.",
+    show_default=True,
+)
+def trigger_alert(ctx, is_ok: bool, **kwargs) -> None:
+    """Trigger a user alert"""
+    try:
+        simvue_cli.actions.trigger_user_alert(
+            status="ok" if is_ok else "critical", **kwargs
+        )
+    except ValueError as e:
+        if ctx.obj["plain"]:
+            print(e.args[0])
+        else:
+            click.secho(e.args[0], fg="red", bold=True)
+        sys.exit(1)
+
+
 @simvue_alert.command("list")
 @click.pass_context
 @click.option(
