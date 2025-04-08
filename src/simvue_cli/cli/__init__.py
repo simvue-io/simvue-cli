@@ -1518,6 +1518,7 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
 @click.pass_context
 @click.option(
     "--format",
+    "table_format",
     type=click.Choice(list(tabulate._table_formats.keys())),
     help="Display as table with output format",
     default=None,
@@ -1545,7 +1546,7 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
 @click.option("--enabled", is_flag=True, help="Show if storage is enabled")
 def list_storages(
     ctx,
-    format: str,
+    table_format: str,
     backend: bool,
     tenant_usable: bool,
     default: bool,
@@ -1575,7 +1576,7 @@ def list_storages(
         storages,
         plain_text=ctx.obj["plain"],
         enumerate_=enumerate_,
-        format=format,
+        format=table_format,
     )
     click.echo(table)
 
@@ -1619,6 +1620,7 @@ def simvue_artifact(ctx):
 @click.pass_context
 @click.option(
     "--format",
+    "table_format",
     type=click.Choice(list(tabulate._table_formats.keys())),
     help="Display as table with output format",
     default=None,
@@ -1666,10 +1668,9 @@ def simvue_artifact(ctx):
     show_default=True,
 )
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
-@click.pass_context
 def artifact_list(
     ctx,
-    format_: str,
+    table_format: str | None,
     enumerate_: bool,
     original_path: bool,
     storage: bool,
@@ -1710,7 +1711,7 @@ def artifact_list(
         storages,
         plain_text=ctx.obj["plain"],
         enumerate_=enumerate_,
-        format=format,
+        format=table_format,
     )
     click.echo(table)
 
