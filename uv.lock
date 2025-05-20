@@ -90,7 +90,7 @@ name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593 }
 wheels = [
@@ -871,7 +871,7 @@ wheels = [
 
 [[package]]
 name = "simvue"
-version = "2.1.0"
+version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -895,14 +895,14 @@ dependencies = [
     { name = "toml" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2f/98/99c2043b62f47e576ec9530ca6286b24ca82da8b9c418beba482b5b2919c/simvue-2.1.0.tar.gz", hash = "sha256:9658c6d382cd806ebcc9e987aba8837e5b2fc3968070ddcd66346c5361baa744", size = 115547 }
+sdist = { url = "https://files.pythonhosted.org/packages/46/87/0b0f2865aba8ef1df65e82cb32416f4af3f08dbeec00933dce312f8ac838/simvue-2.1.1.tar.gz", hash = "sha256:28c5d01ee685222bf6d6828ae93bb1e32fae3d3a3594c86959ae1e3dd821db55", size = 115046 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/a3/a05abbc433609c4c463fb266e6fa2ff2d19ba674507a994831fbe0d06a8b/simvue-2.1.0-py3-none-any.whl", hash = "sha256:b37c0db201daaf219566fd2bb6bf7105d572bf9e312e89f2d5efbdd1ae57e1ec", size = 147405 },
+    { url = "https://files.pythonhosted.org/packages/16/96/b29c81d9ac84e60230abd85a8fec091e7ae3b846b9a25704366de4e8cbc8/simvue-2.1.1-py3-none-any.whl", hash = "sha256:fd8f8940eb5bab07da46102c9468f8cabe1fc0d347f4c1dc2bdf539be0575652", size = 146888 },
 ]
 
 [[package]]
 name = "simvue-cli"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -933,7 +933,7 @@ requires-dist = [
     { name = "click-params", specifier = ">=0.5.0" },
     { name = "regex", specifier = ">=2024.11.6" },
     { name = "requests", specifier = ">=2.32.3" },
-    { name = "simvue", specifier = ">=2.1.0" },
+    { name = "simvue", specifier = ">=2.1.1" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "toml", specifier = ">=0.10.2" },
 ]

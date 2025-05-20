@@ -924,7 +924,6 @@ def simvue_tag(ctx) -> None:
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 def tag_list(
     ctx,
-    count: int,
     enumerate_: bool,
     created: bool,
     table_format: str | None,
@@ -1128,7 +1127,6 @@ def tenant_list(
     ctx,
     table_format: str,
     enumerate_: bool,
-    count: int,
     max_runs: bool,
     max_data_volume: bool,
     max_request_rate: bool,
@@ -1212,7 +1210,6 @@ def user(ctx) -> None:
 def list_user(
     ctx,
     enumerate_: bool,
-    count: int,
     table_format: str | None,
     username: bool,
     email: bool,
