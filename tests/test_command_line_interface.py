@@ -337,8 +337,9 @@ def test_artifact_list(create_test_run: tuple[simvue.Run, dict]) -> None:
             "--mime-type",
             "--count=20",
             "--enumerate",
-            f"--format=simple"
-        ]
+            "--format=simple"
+        ],
+        catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
     assert run_data["file_1"] in result.output
