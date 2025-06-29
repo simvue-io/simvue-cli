@@ -507,6 +507,31 @@ def simvue_alert(ctx) -> None:
     pass
 
 
+@simvue_alert.command("trigger")
+@click.pass_context
+@click.argument("run_id")
+@click.argument("alert_id")
+@click.option(
+    "--ok",
+    "is_ok",
+    is_flag=True,
+    help="Set alert to status 'ok' as opposed to critical.",
+    show_default=True,
+)
+def trigger_alert(ctx, is_ok: bool, **kwargs) -> None:
+    """Trigger a user alert"""
+    try:
+        simvue_cli.actions.trigger_user_alert(
+            status="ok" if is_ok else "critical", **kwargs
+        )
+    except ValueError as e:
+        if ctx.obj["plain"]:
+            print(e.args[0])
+        else:
+            click.secho(e.args[0], fg="red", bold=True)
+        sys.exit(1)
+
+
 @simvue_alert.command("list")
 @click.pass_context
 @click.option(
@@ -927,7 +952,6 @@ def simvue_tag(ctx) -> None:
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 def tag_list(
     ctx,
-    count: int,
     enumerate_: bool,
     created: bool,
     table_format: str | None,
@@ -1131,7 +1155,6 @@ def tenant_list(
     ctx,
     table_format: str,
     enumerate_: bool,
-    count: int,
     max_runs: bool,
     max_data_volume: bool,
     max_request_rate: bool,
@@ -1215,7 +1238,6 @@ def user(ctx) -> None:
 def list_user(
     ctx,
     enumerate_: bool,
-    count: int,
     table_format: str | None,
     username: bool,
     email: bool,
@@ -1521,6 +1543,7 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
 @click.pass_context
 @click.option(
     "--format",
+    "table_format",
     type=click.Choice(list(tabulate._table_formats.keys())),
     help="Display as table with output format",
     default=None,
@@ -1548,7 +1571,7 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
 @click.option("--enabled", is_flag=True, help="Show if storage is enabled")
 def list_storages(
     ctx,
-    format: str,
+    table_format: str,
     backend: bool,
     tenant_usable: bool,
     default: bool,
@@ -1578,7 +1601,7 @@ def list_storages(
         storages,
         plain_text=ctx.obj["plain"],
         enumerate_=enumerate_,
-        format=format,
+        format=table_format,
     )
     click.echo(table)
 
@@ -1622,6 +1645,7 @@ def simvue_artifact(ctx):
 @click.pass_context
 @click.option(
     "--format",
+    "table_format",
     type=click.Choice(list(tabulate._table_formats.keys())),
     help="Display as table with output format",
     default=None,
@@ -1669,10 +1693,9 @@ def simvue_artifact(ctx):
     show_default=True,
 )
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
-@click.pass_context
 def artifact_list(
     ctx,
-    format_: str,
+    table_format: str | None,
     enumerate_: bool,
     original_path: bool,
     storage: bool,
@@ -1713,7 +1736,7 @@ def artifact_list(
         storages,
         plain_text=ctx.obj["plain"],
         enumerate_=enumerate_,
-        format=format,
+        format=table_format,
     )
     click.echo(table)
 

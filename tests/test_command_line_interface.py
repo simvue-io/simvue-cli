@@ -1,5 +1,7 @@
+from logging import critical
 import random
 import string
+import typing
 from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
 from simvue.api.objects import Alert, Storage, Tenant, User
@@ -252,6 +254,31 @@ def test_user_alert() -> None:
         Alert(identifier=_alert)
 
 
+@pytest.mark.parametrize("status", ("ok", "critical"))
+def test_user_alert_trigger(create_plain_run: tuple[simvue.Run, dict], status: typing.Literal["ok", "critical"]) -> None:
+    run, _ = create_plain_run
+    _alert_id = run.create_user_alert(
+        name="test_user_alert_triggered_alert_cli",
+        description="Test alert for CLI triggering",
+        trigger_abort=True
+    )
+    _command = [
+        "alert",
+        "trigger",
+        run.id,
+        _alert_id
+    ]
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        _command + ([] if status == "critical" else ["--ok"])
+    )
+    assert result.exit_code == 0, result.output
+    _alert: UserAlert = Alert(_alert_id)
+    assert _alert.get_status(run.id) == status
+
+
+
 def test_server_ping() -> None:
     runner = click.testing.CliRunner()
     result = runner.invoke(
@@ -337,8 +364,9 @@ def test_artifact_list(create_test_run: tuple[simvue.Run, dict]) -> None:
             "--mime-type",
             "--count=20",
             "--enumerate",
-            f"--format=simple"
-        ]
+            "--format=simple"
+        ],
+        catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
     assert run_data["file_1"] in result.output
