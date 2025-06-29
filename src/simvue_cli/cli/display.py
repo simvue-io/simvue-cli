@@ -191,7 +191,12 @@ def create_objects_display(
             row.append(str(i))
 
         for column in columns:
-            value = getattr(obj, column, "N/A")
+            # FIXME: Hack for if a property has not been added to the API yet
+            if not (value := getattr(obj, column, None)):
+                try:
+                    value = obj._get_attribute(column)
+                except KeyError:
+                    value = "N/A"
             if formatter := COLUMN_FORMAT.get(column):
                 row.append(formatter(value, plain_text, out_config))
             else:

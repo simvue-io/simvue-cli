@@ -133,12 +133,15 @@ def about_simvue(ctx) -> None:
     """Display full information on Simvue instance"""
     width = shutil.get_terminal_size().columns
     click.echo(
-        "\n".join(f"{'\t' * int(0.015 * width)}{r}" for r in SIMVUE_LOGO.split("\n"))
+        "\n".join("\t" * int(0.015 * width) + f"{r}" for r in SIMVUE_LOGO.split("\n"))
     )
     click.echo(f"\n{width * '='}\n")
-    click.echo(f"\n{'\t' * int(0.04 * width)} Provided under the Apache-2.0 License")
     click.echo(
-        f"{'\t' * int(0.04 * width)}© Copyright {datetime.datetime.now().strftime('%Y')} Simvue Development Team\n"
+        "\n" + "\t" * int(0.04 * width) + "Provided under the Apache-2.0 License"
+    )
+    click.echo(
+        "\t" * int(0.04 * width)
+        + f"© Copyright {datetime.datetime.now().strftime('%Y')} Simvue Development Team\n"
     )
     out_table: list[list[str]] = []
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
@@ -156,7 +159,7 @@ def about_simvue(ctx) -> None:
         out_table.append(["Server Version: ", server_version])
     click.echo(
         "\n".join(
-            f"{'\t' * int(0.045 * width)}{r}"
+            "\t" * int(0.045 * width) + f"{r}"
             for r in tabulate.tabulate(out_table, tablefmt="plain")
             .__str__()
             .split("\n")
