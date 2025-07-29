@@ -1,0 +1,2 @@
+class SessionAbort(Exception):
+    pass

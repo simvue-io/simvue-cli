@@ -1,0 +1,20 @@
+---
+workflow: Test Workflow
+metadata:
+  test_name: test_workflow
+tags:
+  - workflow_demo
+  - testing
+options:
+  retention_period: 3 mins
+steps:
+  - description: Try classic greeting
+    label: hello_world
+    executable: echo
+    arguments:
+      - 'Hello World!'
+  - description: Print Directory
+    label: work_dir_print
+    executable: ls
+    arguments:
+      - -ltr
