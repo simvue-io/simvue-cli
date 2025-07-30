@@ -1,0 +1,10 @@
+---
+workflow: Test Simvue Workflow
+metadata:
+  test_name: test_workflow
+tags:
+  - workflow_demo
+  - testing
+options:
+  retention_period: 3 mins
+steps: []
