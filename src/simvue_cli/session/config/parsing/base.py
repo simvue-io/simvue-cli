@@ -52,7 +52,7 @@ class ParserDefinition(pydantic.BaseModel):
     def track_parser_function(
         self, input_file: str, **kwargs: object
     ) -> tuple[dict[str, object], list[dict[str, int | float | bool]]]:
-        self._parse_file(input_file, **kwargs)
+        return self._parse_file(input_file, **kwargs)
 
     @staticmethod
     def _convert_value(value: str) -> int | float | bool:
@@ -81,7 +81,8 @@ class ParserDefinition(pydantic.BaseModel):
             for k, v in row.items():
                 for tracked in self.tracked_values:
                     if re.match(tracked.pattern, k):
-                        _row_metrics[(tracked.label or k)] = self._convert_value(v)
+                        _label = tracked.label if isinstance(tracked, TrackedLabelledValue) else k
+                        _row_metrics[_label] = self._convert_value(v)
                         _find_metric = False
                         break
                 if not _find_metric:
@@ -96,6 +97,7 @@ class ParserDefinition(pydantic.BaseModel):
                 parser_func=self.track_parser_function
             )
         else:
+            print(f"Attached {self.path} monitor")
             file_monitor.track(
                 path_glob_exprs=f"{self.path}",
                 static=self.static,

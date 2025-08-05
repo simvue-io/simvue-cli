@@ -244,6 +244,11 @@ class SessionConfiguration(pydantic.BaseModel):
                 for key, value in _mapping.items():
                     _path = _path.replace(key, value)
                 values["steps"][i]["inputs"][j]["path"] = pathlib.Path(_path)
+            for j, parse_entry in enumerate(step.get("parse", [])):
+                _path: str = f"{parse_entry['path']}"
+                for key, value in _mapping.items():
+                    _path = _path.replace(key, value)
+                values["steps"][i]["parse"][j]["path"] = pathlib.Path(_path)
             for j, output_file in enumerate(step.get("outputs", [])):
                 _path: str = f"{output_file['path']}"
                 for key, value in _mapping.items():
