@@ -7,6 +7,8 @@ import click
 import re
 import shutil
 
+from .parsing import ParserType
+
 FOLDER_REGEX: str = r"^/.*"
 NAME_REGEX: str = r"^[a-zA-Z0-9\-\_\s\/\.:]+$"
 
@@ -39,14 +41,6 @@ class File(pydantic.BaseModel):
         return f"{self.name}{self.path}".__hash__()
 
 
-class TrackedFile(File):
-    mode: Mode
-    static: bool = False
-
-    def __hash__(self) -> int:
-        return super().__hash__()
-
-
 class Step(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(
         arbitrary_types_allowed=False,
@@ -62,14 +56,14 @@ class Step(pydantic.BaseModel):
         pattern=NAME_REGEX,
         description="Default name for Simvue runs, if unspecified workflow name is used.",
     )
-    executable: pydantic.FilePath | None = pydantic.Field(
-        None, description="Location of executable for simulation."
+    executable: pydantic.FilePath = pydantic.Field(
+        ..., description="Location of executable for simulation."
     )
-    arguments: list[str] = []
-    inputs: typing.Annotated[list, pydantic.conset(File)] | None = pydantic.Field(
+    arguments: list[str] = pydantic.Field(default_factory=list, description="Arguments to command.")
+    inputs: list[File] | None = pydantic.Field(
         None, description="Required input files in working directory."
     )
-    outputs: typing.Annotated[list, pydantic.conset(File)] | None = pydantic.Field(
+    outputs: list[File] | None = pydantic.Field(
         None, description="Created output files in working directory."
     )
     environment: dict[str, str | int | float | None] | None = pydantic.Field(
@@ -92,6 +86,14 @@ class Step(pydantic.BaseModel):
         ):
             return pathlib.Path(path_str)
         return executable
+    
+    @pydantic.field_validator("arguments", mode="before")
+    @classmethod
+    def expand_arguments(cls, arguments: list[str]) -> list[str]:
+        return [
+            os.path.expanduser(os.path.expandvars(arg))
+            for arg in arguments
+        ]
 
     @property
     def status(self) -> Status:
@@ -121,9 +123,9 @@ class Step(pydantic.BaseModel):
             f"""
 ***************************************************************************
 Label       : {self.label}
-Command     : {self.executable or ""}{(" " + " ".join(self.arguments)) if self.arguments else ""}
-Inputs      : {", ".join(self.inputs or [])}
-Outputs     : {", ".join(self.outputs or [])}{"\nReturn Code : " + str(self._return_code) if self._return_code is not None else ""}
+Command     : {self.executable}{(" " + " ".join(self.arguments)) if self.arguments else ""}
+Inputs      : {", ".join([str(f.path) for f in self.inputs or []])}
+Outputs     : {", ".join([str(f.path) for f in self.outputs or []])}{"\nReturn Code : " + str(self._return_code) if self._return_code is not None else ""}
 ***************************************************************************{"\n\n" + self._return_output if self._return_output is not None else ""}
 """,
             fg=_font_color,
@@ -141,6 +143,7 @@ class Options(pydantic.BaseModel):
         extra="forbid",
     )
     enable_emission_metrics: bool = False
+    disable_resources_metrics: bool = False
     retention_period: (
         typing.Annotated[
             str, pydantic.StringConstraints(strip_whitespace=True, to_lower=True)
@@ -165,16 +168,10 @@ class Simulation(Step):
     options: Options = pydantic.Field(
         default_factory=Options, description="Options for this session"
     )
-    name: str = pydantic.Field(..., pattern=NAME_REGEX)
     script: pathlib.Path | None = pydantic.Field(
         None, description="Script to be executed."
     )
-    inputs: typing.Annotated[list, pydantic.conset(TrackedFile)] | None = (
-        pydantic.Field(None, description="Required input files in working directory.")
-    )
-    outputs: typing.Annotated[list, pydantic.conset(TrackedFile)] | None = (
-        pydantic.Field(None, description="Created output files in working directory.")
-    )
+    parse: list[ParserType]
     metadata: dict[str, str] | None = pydantic.Field(
         None, description="Metadata to attach to this simulation."
     )
@@ -194,6 +191,9 @@ class SessionConfiguration(pydantic.BaseModel):
         validate_return=True,
         validate_default=True,
         extra="forbid",
+    )
+    session_file: pydantic.FilePath = pydantic.Field(
+        ..., description="Path to the session YAML file."
     )
     workflow: str = pydantic.Field(..., description="Name for this workflow")
     label: str | None = pydantic.Field(
@@ -223,4 +223,30 @@ class SessionConfiguration(pydantic.BaseModel):
             if not re.match(r"[\w\d_]", character):
                 values["label"] = values["label"].replace(character, "")
         return values
-
+    
+    @pydantic.field_validator("session_file", mode="before")
+    @classmethod
+    def _get_session_file_path(cls, session_file: pathlib.Path) -> pathlib.Path:
+        _expanded = os.path.expanduser(f"{session_file}")
+        _expanded = os.path.expandvars(_expanded)
+        return pathlib.Path(_expanded)
+    
+    @pydantic.model_validator(mode="before")
+    @classmethod
+    def _parse_special_variables(cls, values: dict[str, object]) -> dict[str, object]: 
+        _mapping: dict[str, str] = {
+            "${{ session_file }}": f"{values['session_file']}",
+            "${{ session_dir }}": f"{pathlib.Path(values['session_file']).parent}"
+        }
+        for i, step in enumerate(values["steps"]):
+            for j, input_file in enumerate(step.get("inputs", [])):
+                _path: str = f"{input_file['path']}"
+                for key, value in _mapping.items():
+                    _path = _path.replace(key, value)
+                values["steps"][i]["inputs"][j]["path"] = pathlib.Path(_path)
+            for j, output_file in enumerate(step.get("outputs", [])):
+                _path: str = f"{output_file['path']}"
+                for key, value in _mapping.items():
+                    _path = _path.replace(key, value)
+                values["steps"][i]["outputs"][j]["path"] = pathlib.Path(_path)
+        return values 

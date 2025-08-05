@@ -13,7 +13,7 @@ from simvue_cli.session.config.schema import (
     Step,
     Status,
     Simulation,
-    TrackedFile,
+    File
 )
 from simvue_cli.session.exception import SessionAbort
 
@@ -39,6 +39,7 @@ class Workflow(pydantic.BaseModel):
         cls, session_file: pydantic.FilePath, offline: bool = False
     ) -> typing.Self:
         _config = yaml.load(session_file.open(), Loader=yaml.SafeLoader)
+        _config["session_file"] = session_file
         return cls(offline=offline, config=_config)
 
     def _run_simvue_step(self, step: Simulation) -> Simulation:
@@ -46,12 +47,13 @@ class Workflow(pydantic.BaseModel):
             warnings="error"
         ) | step.options.model_dump(warnings="error")
         _config = dict(
-            enable_emission_metrics=_init_args.pop("enable_emission_metrics"),
-            disable_resource_metrics=_init_args.pop("disable_resource_metrics"),
-            system_metrics_interval=_init_args.pop("system_metrics_interval"),
-            abort_on_alert=_init_args.pop("abort_on_alert"),
-            queue_blocking=_init_args.pop("queue_blocking"),
-            suppress_errors=_init_args.pop("suppress_errors"),
+            enable_emission_metrics=_init_args.pop("enable_emission_metrics", None),
+            disable_resources_metrics=_init_args.pop("disable_resources_metrics", None),
+            system_metrics_interval=_init_args.pop("system_metrics_interval", None),
+            abort_on_alert=_init_args.pop("abort_on_alert", None),
+            queue_blocking=_init_args.pop("queue_blocking", None),
+            suppress_errors=_init_args.pop("suppress_errors", None),
+            storage_id=_init_args.pop("storage_id", None)
         )
         _folder: str = f"{step.folder or ''}/{self._session_id}"
         _step_trigger = multiprocessing.Event()
@@ -64,8 +66,8 @@ class Workflow(pydantic.BaseModel):
                 **_init_args,
             )
             sv_run.config(**_config)
-            _inputs: list[TrackedFile] = step.inputs or []
-            _outputs: list[TrackedFile] = step.outputs or []
+            _inputs: list[File] = step.inputs or []
+            _outputs: list[File] = step.outputs or []
             for input in _inputs:
                 sv_run.save_file(input, category="input", name=input.name)
 
@@ -74,22 +76,22 @@ class Workflow(pydantic.BaseModel):
                 per_thread_callback=lambda data, _: sv_run.log_metrics(data),
             ) as file_monitor:
                 sv_run.add_process(
-                    identifier=f"execute_{step.name}",
+                    f"execute_{step.label}",
                     *step.arguments,
                     executable=step.executable,
                     script=step.script,
                     cwd=step.working_directory,
                     env=step.environment,
-                    completion_trigger=_step_trigger,
+                    completion_callback=lambda *_, **__: _step_trigger.set(),
                 )
-                for output in _outputs:
-                    file_monitor.track(
-                        path_glob_exprs=f"{output.path}",
-                        static=output.static,
-                    )
+                for parsible in step.parse or []:
+                    parsible.attach_to_monitor(file_monitor)
                 file_monitor.run()
             for output in _outputs:
-                sv_run.save_file(output, category="output", name=output.name)
+                sv_run.save_file(f"{output.path}", category="output", name=output.name)
+            step._return_code = sv_run._executor.exit_status
+            step._return_output = sv_run._executor.std_out(f"execute_{step.label}")
+        return step
 
     def _execute(self, step: Step) -> Step:
         if step.status == Status.Waiting and step.inputs:

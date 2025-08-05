@@ -7,4 +7,22 @@ tags:
   - testing
 options:
   retention_period: 3 mins
-steps: []
+steps:
+  - description: Greet the User
+    label: user_greeting
+    executable: echo 
+    arguments:
+      - Hello $USERNAME!
+  - description: Test CSV Parsing
+    executable: echo
+    arguments:
+      - Completed!
+    label: csv_parse
+    outputs:
+      - path: "${{ session_dir }}/sample_data.csv"
+    parse:
+      - parser: csv
+        path: "${{ session_dir }}/sample_data.csv"
+        tracked_values:
+          - pattern: Temperature_C
+        
