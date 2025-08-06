@@ -10,7 +10,6 @@ def test_example_non_simvue_workflow() -> None:
 
 def test_example_simvue_workflow() -> None:
     _example_file = pathlib.Path(__file__).parent.joinpath("data", "simvue_session.yml")
-    for step in Workflow.from_file(_example_file).play():
-        print(step)
-        assert step.status == Status.Waiting, f"Expected 'waiting' got '{step.status}' for '{step.label}'"
+    for step in Workflow.from_file(_example_file).play(force=True):
+        assert step.status in (Status.Completed, Status.Waiting), f"Expected success got '{step.status}' for '{step.label}'"
         assert step._return_code == 0

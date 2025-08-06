@@ -13,7 +13,7 @@ from simvue_cli.session.config.schema import (
     Step,
     Status,
     Simulation,
-    File
+    File,
 )
 from simvue_cli.session.exception import SessionAbort
 
@@ -32,6 +32,12 @@ class Workflow(pydantic.BaseModel):
     _session_id: str | None = pydantic.PrivateAttr(
         datetime.datetime.now(datetime.UTC).strftime("%d_%m_%y_%H_%M_%S_%f")
     )
+
+    @property
+    def session_id(self) -> str:
+        if not self._session_id:
+            raise RuntimeError("No session ID set.")
+        return self._session_id
 
     @classmethod
     @pydantic.validate_call
@@ -53,9 +59,9 @@ class Workflow(pydantic.BaseModel):
             abort_on_alert=_init_args.pop("abort_on_alert", None),
             queue_blocking=_init_args.pop("queue_blocking", None),
             suppress_errors=_init_args.pop("suppress_errors", None),
-            storage_id=_init_args.pop("storage_id", None)
+            storage_id=_init_args.pop("storage_id", None),
         )
-        _folder: str = f"{step.folder or ''}/{self._session_id}"
+        _folder: str = f"{step.folder or ''}/{self.session_id}"
         _step_trigger = multiprocessing.Event()
         with simvue.Run(mode="offline" if self.offline else "online") as sv_run:
             sv_run.init(
@@ -69,7 +75,10 @@ class Workflow(pydantic.BaseModel):
             _inputs: list[File] = step.inputs or []
             _outputs: list[File] = step.outputs or []
             for input in _inputs:
-                sv_run.save_file(input, category="input", name=input.name)
+                sv_run.save_file(input.path, category="input", name=input.name)
+
+            _arguments = step.arguments if step.executable else None
+            _executable = step.shell or step.executable
 
             with multiparser.FileMonitor(
                 termination_trigger=_step_trigger,
@@ -77,9 +86,9 @@ class Workflow(pydantic.BaseModel):
             ) as file_monitor:
                 sv_run.add_process(
                     f"execute_{step.label}",
-                    *step.arguments,
+                    *_arguments,
                     executable=step.executable,
-                    script=step.script,
+                    script=step.user_script,
                     cwd=step.working_directory,
                     env=step.environment,
                     completion_callback=lambda *_, **__: _step_trigger.set(),
@@ -91,15 +100,18 @@ class Workflow(pydantic.BaseModel):
                 sv_run.save_file(f"{output.path}", category="output", name=output.name)
             step._return_code = sv_run._executor.exit_status
             step._return_output = sv_run._executor.std_out(f"execute_{step.label}")
+        step.clean()
         return step
 
-    def _execute(self, step: Step) -> Step:
+    def _execute(self, step: Step, *, force: bool) -> Step:
         if step.status == Status.Waiting and step.inputs:
             raise RuntimeError(
                 f"Failed to find required inputs for next pending step '{step.label}'"
             )
-        if step.status == Status.Completed:
+        if not force and step.status == Status.Completed:
+            step.clean()
             return step
+
         if isinstance(step, Simulation):
             return self._run_simvue_step(step)
 
@@ -107,6 +119,10 @@ class Workflow(pydantic.BaseModel):
 
         if step.executable:
             _command = [step.executable] + _command
+        else:
+            _command = [step.shell, step.user_script]
+
+        print(_command)
 
         _result = subprocess.Popen(
             _command,
@@ -125,12 +141,13 @@ class Workflow(pydantic.BaseModel):
         if _result.returncode != 0:
             raise SessionAbort
 
+        step.clean()
         return step
 
-    def play(self) -> typing.Generator[Step, None, None]:
+    def play(self, *, force: bool = False) -> typing.Generator[Step, None, None]:
         for i, step in enumerate(self.config.steps):
             try:
-                yield self._execute(step)
+                yield self._execute(step, force=force)
             except SessionAbort:
                 return
             finally:

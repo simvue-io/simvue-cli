@@ -55,6 +55,11 @@ documentation = "https://docs.simvue.io"
 [project.scripts]
 simvue = "simvue_cli.cli:simvue"
 
+[project.optional-dependencies]
+fds = [
+    "simvue-fds>=1.1.1",
+]
+
 [tool.ruff]
 lint.extend-select = ["C901"]
 lint.mccabe.max-complexity = 11

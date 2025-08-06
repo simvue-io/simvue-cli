@@ -8,16 +8,19 @@ tags:
 options:
   retention_period: 3 mins
 steps:
-  - description: Greet the User
-    label: user_greeting
-    executable: echo 
+  - description: Generate Dataset
+    label: create_csv 
+    shell: bash
     arguments:
-      - Hello $USERNAME!
+      - echo x,y >> ${{ session_dir }}/out.csv;
+      - for i in {0..100}; do echo $i,$((i * 2)) >> ${{ session_dir }}/out.csv; done
   - description: Test CSV Parsing
     executable: echo
     arguments:
-      - Completed!
+      - Dummy Simulation...
     label: csv_parse
+    inputs:
+      - path: "${{ session_dir }}/out.csv"
     outputs:
       - path: "${{ session_dir }}/sample_data.csv"
     parse:

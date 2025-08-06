@@ -81,7 +81,11 @@ class ParserDefinition(pydantic.BaseModel):
             for k, v in row.items():
                 for tracked in self.tracked_values:
                     if re.match(tracked.pattern, k):
-                        _label = tracked.label if isinstance(tracked, TrackedLabelledValue) else k
+                        _label = (
+                            tracked.label
+                            if isinstance(tracked, TrackedLabelledValue)
+                            else k
+                        )
                         _row_metrics[_label] = self._convert_value(v)
                         _find_metric = False
                         break
@@ -89,17 +93,16 @@ class ParserDefinition(pydantic.BaseModel):
                     break
             _filtered.append(_row_metrics)
         return _filtered
-    
+
     def attach_to_monitor(self, file_monitor: "FileMonitor") -> None:
         if self.mode == "tail":
             file_monitor.tail(
-                path_glob_exprs=f"{self.path}",
-                parser_func=self.track_parser_function
+                path_glob_exprs=f"{self.path}", parser_func=self.track_parser_function
             )
         else:
             print(f"Attached {self.path} monitor")
             file_monitor.track(
                 path_glob_exprs=f"{self.path}",
                 static=self.static,
-                parser_func=self.track_parser_function
+                parser_func=self.track_parser_function,
             )
