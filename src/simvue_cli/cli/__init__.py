@@ -25,7 +25,7 @@ import importlib.metadata
 import tabulate
 import requests
 import simvue as simvue_client
-from simvue.api.objects import Alert, Run, Folder, S3Storage, Tag, Storage
+from simvue.api.objects import Alert, Run, Folder, S3Storage, Tag, Storage, Artifact
 from simvue.api.objects.administrator import User, Tenant
 from simvue.exception import ObjectNotFoundError
 
@@ -383,6 +383,7 @@ def update_metadata(run_id: str, metadata: dict) -> None:
 @click.pass_context
 @click.option(
     "--format",
+    "table_format",
     type=click.Choice(list(tabulate._table_formats.keys())),
     help="Display as table with output format",
     default=None,
@@ -420,7 +421,7 @@ def update_metadata(run_id: str, metadata: dict) -> None:
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 def list_runs(
     ctx,
-    format: str,
+    table_format: str,
     tags: bool,
     description: bool,
     user: bool,
@@ -452,7 +453,11 @@ def list_runs(
         columns.append("status")
 
     table = create_objects_display(
-        columns, runs, plain_text=ctx.obj["plain"], enumerate_=enumerate_, format=format
+        columns,
+        runs,
+        plain_text=ctx.obj["plain"],
+        enumerate_=enumerate_,
+        format=table_format,
     )
     click.echo(table)
 
@@ -474,6 +479,115 @@ def get_run_json(run_id: str) -> None:
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
+
+
+@simvue_run.command("artifacts")
+@click.pass_context
+@click.option(
+    "--format",
+    "table_format",
+    type=click.Choice(list(tabulate._table_formats.keys())),
+    help="Display as table with output format",
+    default=None,
+)
+@click.option(
+    "--enumerate",
+    "enumerate_",
+    is_flag=True,
+    help="Show counter next to runs",
+    default=False,
+    show_default=True,
+)
+@click.option(
+    "--count",
+    type=int,
+    help="Maximum number of runs to retrieve",
+    default=20,
+    show_default=True,
+)
+@click.option(
+    "--original-path",
+    is_flag=True,
+    help="Show original path of artifact",
+    default=False,
+)
+@click.option(
+    "--storage", is_flag=True, help="Show storage ID of artifact", default=False
+)
+@click.option(
+    "--mime-type", is_flag=True, help="Show MIME type of artifact", default=False
+)
+@click.option("--created", is_flag=True, help="Show created timestamp")
+@click.option("--user", is_flag=True, help="Show artifact user UUID")
+@click.option("--download-url", is_flag=True, help="Show artifact download URL")
+@click.option("--uploaded", is_flag=True, help="Show artifact upload status")
+@click.option("--checksum", is_flag=True, help="Show artifact checksum")
+@click.option("--name", is_flag=True, help="Show artifact name")
+@click.option("--size", is_flag=True, help="Show artifact size")
+@click.argument("run_id", required=False)
+def get_run_artifacts(
+    ctx,
+    run_id: str,
+    table_format: str,
+    enumerate_: bool,
+    original_path: bool,
+    storage: bool,
+    mime_type: bool,
+    created: bool,
+    user: bool,
+    download_url: bool,
+    uploaded: bool,
+    name: bool,
+    size: bool,
+    **_,
+) -> None:
+    """Retrieve the artifacts for a given Run from the Simvue server
+
+    If no RUN_ID is provided the input is read from stdin
+    """
+    if not run_id:
+        run_id = input()
+
+    try:
+        if not (artifacts := list(simvue_cli.actions.get_run_artifacts(run_id))):
+            raise SystemExit
+    except SystemExit:
+        sys.exit(1)
+    except RuntimeError as e:
+        click.secho(
+            f"Failed to retrieve run '{run_id}': {e.args[0]}", fg="red", bold=True
+        )
+        sys.exit(1)
+
+    columns = ["id"]
+
+    if created:
+        columns.append("created")
+    if name:
+        columns.append("name")
+    if size:
+        columns.append("size")
+    if original_path:
+        columns.append("original_path")
+    if storage:
+        columns.append("storage")
+    if uploaded:
+        columns.append("uploaded")
+    if mime_type:
+        columns.append("mime_type")
+    if user:
+        columns.append("user")
+    if download_url:
+        columns.append("download_url")
+
+    table = create_objects_display(
+        columns,
+        artifacts,
+        plain_text=ctx.obj["plain"],
+        enumerate_=enumerate_,
+        format=table_format,
+    )
+    click.echo(table)
 
 
 @simvue.command("purge")
@@ -1518,6 +1632,7 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
 @click.pass_context
 @click.option(
     "--format",
+    "table_format",
     type=click.Choice(list(tabulate._table_formats.keys())),
     help="Display as table with output format",
     default=None,
@@ -1545,7 +1660,7 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
 @click.option("--enabled", is_flag=True, help="Show if storage is enabled")
 def list_storages(
     ctx,
-    format: str,
+    table_format: str,
     backend: bool,
     tenant_usable: bool,
     default: bool,
@@ -1575,7 +1690,7 @@ def list_storages(
         storages,
         plain_text=ctx.obj["plain"],
         enumerate_=enumerate_,
-        format=format,
+        format=table_format,
     )
     click.echo(table)
 
@@ -1615,10 +1730,30 @@ def simvue_artifact(ctx):
     pass
 
 
+@simvue_artifact.command("json")
+@click.argument("artifact_id", required=False)
+def get_artifact_json(artifact_id: str) -> None:
+    """Retrieve artifact information from Simvue server
+
+    If no ARTIFACT_ID is provided the input is read from stdin
+    """
+    if not artifact_id:
+        artifact_id = input()
+
+    try:
+        artifact: Artifact = simvue_cli.actions.get_artifact(artifact_id)
+        artifact_info = artifact.to_dict()
+        click.echo(json.dumps(dict(artifact_info.items()), indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve artifact '{artifact_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
+
+
 @simvue_artifact.command("list")
 @click.pass_context
 @click.option(
     "--format",
+    "table_format",
     type=click.Choice(list(tabulate._table_formats.keys())),
     help="Display as table with output format",
     default=None,
@@ -1669,7 +1804,7 @@ def simvue_artifact(ctx):
 @click.pass_context
 def artifact_list(
     ctx,
-    format_: str,
+    table_format: str,
     enumerate_: bool,
     original_path: bool,
     storage: bool,
@@ -1710,7 +1845,7 @@ def artifact_list(
         storages,
         plain_text=ctx.obj["plain"],
         enumerate_=enumerate_,
-        format=format,
+        format=table_format,
     )
     click.echo(table)
 

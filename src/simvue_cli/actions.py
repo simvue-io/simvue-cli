@@ -27,6 +27,7 @@ import simvue.metadata as sv_meta
 from datetime import datetime, timezone
 
 from simvue.run import get_system
+from simvue.client import Client
 from simvue.models import DATETIME_FORMAT
 from simvue.api.objects.alert.base import AlertBase
 from simvue.api.objects import (
@@ -364,9 +365,14 @@ def get_artifacts_list(
     return Artifact.get(sorting=_sorting, **kwargs)
 
 
+def get_artifact(artifact_id: str) -> Artifact:
+    """Retrieve an Artifact from the Simvue server."""
+    return Artifact(identifier=artifact_id, read_only=True)
+
+
 def get_run(run_id: str) -> Run:
     """Retrieve a Run from the Simvue server"""
-    return Run(identifier=run_id)
+    return Run(identifier=run_id, read_only=True)
 
 
 def delete_run(run_id: str) -> None:
@@ -647,3 +653,49 @@ def create_environment(
         )
         for c in iter(lambda: _process.stdout.read(1), b""):
             sys.stdout.buffer.write(c)
+
+
+def get_run_artifacts(
+    run_id: str,
+) -> typing.Generator[tuple[str, Artifact], None, None]:
+    """Retrieve Artifacts for a given run."""
+    try:
+        run: Run = get_run(run_id)
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
+        raise StopIteration
+
+    for artifact in run.artifacts:
+        yield artifact["id"], Artifact(**artifact, read_only=True)
+
+
+def pull_run(run_id: str, output_dir: pathlib.Path) -> list[pathlib.Path] | None:
+    """Pull contents of a Simvue run locally.
+
+    Parameters
+    ----------
+    run_id : str
+        the unique identifier of the run to retrieve.
+    output_dir : pathlib.Path
+        location to download to.
+
+    Returns
+    -------
+    list[pathlib.Path] | None
+        list of downloaded files
+        None if run is not found
+    """
+    if not (_run := get_run(run_id)):
+        return None
+
+    _client = Client()
+
+    _output: list[pathlib.Path] = []
+
+    for _, artifact in get_run_artifacts(run_id):
+        _client.get_artifact_as_file(
+            run_id=run_id, name=artifact.name, output_dir=output_dir
+        )
+        _output.append(output_dir.joinpath(artifact.name))
+    return _output
