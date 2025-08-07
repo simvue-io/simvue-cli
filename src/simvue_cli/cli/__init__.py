@@ -479,6 +479,7 @@ def get_run_json(run_id: str) -> None:
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
+        sys.exit(1)
 
 
 @simvue_run.command("artifacts")
@@ -588,6 +589,40 @@ def get_run_artifacts(
         format=table_format,
     )
     click.echo(table)
+
+
+@simvue_run.command("pull")
+@click.pass_context
+@click.option(
+    "-o",
+    "--output-dir",
+    help="Output directory.",
+    default=f"{pathlib.Path.cwd().joinpath('{run_id}')}",
+    show_default=True,
+)
+@click.argument("run_id", required=False)
+def pull_simvue_run(ctx, output_dir: str, run_id: str) -> None:
+    if not run_id:
+        run_id = input()
+
+    try:
+        _downloaded_files: list[pathlib.Path] = simvue_cli.actions.pull_run(
+            run_id=run_id,
+            output_dir=output_dir.format(run_id=run_id),
+            plain=ctx.obj["plain"],
+        )
+        if not _downloaded_files:
+            return
+        _disp_str = "\n".join(f"{file}" for file in _downloaded_files)
+        click.echo(_disp_str if ctx.obj["plain"] else click.style(_disp_str, bold=True))
+    except RuntimeError as e:
+        _disp_str = f"Failed to download run '{run_id}': {e.args[0]}"
+        click.echo(
+            _disp_str
+            if ctx.obj["plain"]
+            else click.style(_disp_str, fg="red", bold=True)
+        )
+        sys.exit(1)
 
 
 @simvue.command("purge")

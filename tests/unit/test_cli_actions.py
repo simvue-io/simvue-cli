@@ -162,3 +162,14 @@ def test_run_abort(create_test_run, monkeypatch) -> None:
     assert _run._status == "terminated"
 
 
+def test_run_artifact_download(create_test_run) -> None:
+    _, _ = create_test_run
+    _run, _data = create_test_run
+
+    with tempfile.TemporaryDirectory() as temp_d:
+        _out_dir = pathlib.Path(temp_d)
+        _files = simvue_cli.actions.pull_run(_run.id, output_dir=_out_dir)
+        _basenames = [f.name for f in _out_dir.joinpath(_data["folder"][1:]).glob("*")]
+        assert all(f.name in _basenames for f in _files)
+        assert all(_data[f"file_{i}"] in _basenames for i in range(1, 4))
+

@@ -12,6 +12,7 @@ import io
 import pathlib
 import json
 import sys
+import tqdm
 import typing
 import time
 from simvue.exception import ObjectNotFoundError
@@ -670,32 +671,55 @@ def get_run_artifacts(
         yield artifact["id"], Artifact(**artifact, read_only=True)
 
 
-def pull_run(run_id: str, output_dir: pathlib.Path) -> list[pathlib.Path] | None:
+def pull_run(
+    run_id: str, *, output_dir: pathlib.Path, plain: bool = False
+) -> list[pathlib.Path] | None:
     """Pull contents of a Simvue run locally.
 
     Parameters
     ----------
     run_id : str
         the unique identifier of the run to retrieve.
+    *
     output_dir : pathlib.Path
         location to download to.
+    plain : bool, optional
+        whether print statements should be plain. Default False.
 
     Returns
     -------
     list[pathlib.Path] | None
         list of downloaded files
-        None if run is not found
+        None if run does not have artifacts
+
+    Raises
+    ------
+    RuntimeError
+        if run does not exist
     """
     if not (_run := get_run(run_id)):
-        return None
+        raise RuntimeError(f"Run '{run_id}' not found.")
 
     _client = Client()
 
     _output: list[pathlib.Path] = []
+    _artifacts = get_run_artifacts(run_id)
 
-    for _, artifact in get_run_artifacts(run_id):
+    if not _artifacts or len(_list_art := list(_artifacts)) == 0:
+        click.echo("No artifacts found.")
+        return None
+
+    _iter = _list_art if plain else tqdm.tqdm(_list_art, unit="file", colour="blue")
+
+    (_out_dir := output_dir.joinpath(_run.folder[1:])).mkdir(
+        exist_ok=True, parents=True
+    )
+
+    for _, artifact in _iter:
         _client.get_artifact_as_file(
-            run_id=run_id, name=artifact.name, output_dir=output_dir
+            run_id=run_id, name=artifact.name, output_dir=_out_dir
         )
+        if not (_out_file := _out_dir.joinpath(artifact.name)).exists():
+            raise RuntimeError(f"Download of file '{_out_file}' failed.")
         _output.append(output_dir.joinpath(artifact.name))
     return _output
