@@ -940,6 +940,7 @@ def simvue_tag(ctx) -> None:
     show_default=True,
 )
 @click.option("--name", is_flag=True, help="Show names")
+@click.option("--description", is_flag=True, help="Show descriptions")
 @click.option("--color", is_flag=True, help="Show hex colors")
 @click.option(
     "--sort-by",
@@ -956,6 +957,7 @@ def tag_list(
     created: bool,
     table_format: str | None,
     name: bool,
+    description: bool,
     color: bool,
     **kwargs,
 ) -> None:
@@ -972,6 +974,9 @@ def tag_list(
 
     if color:
         columns.append("colour")
+
+    if name:
+        columns.append("description")
 
     table = create_objects_display(
         columns,
