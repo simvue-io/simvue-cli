@@ -107,7 +107,7 @@ def format_tags(
     out_config["tags"] = out_config.get("tags") or {}
 
     if plain_text:
-        return ", ".join(tags)
+        return f"[{', '.join(tags)}]" if tags else ""
 
     tag_out: list[str] = []
 
@@ -129,7 +129,7 @@ def format_tags(
             out_config["tags"][tag] = color
         tag_out.append(click.style(tag, fg=CLICK_COLORS[color], bg=color, bold=True))
 
-    return ", ".join(tag_out)
+    return " ".join(tag_out)
 
 
 # Allocate functions to format each column type
@@ -174,12 +174,11 @@ def create_objects_display(
         either a click formatted string or original text
     """
 
-    if plain_text:
-        return " ".join(obj.id for _, obj in objects)
-
     # Remove 'is_' prefix from relevant columns and format
     table_headers = [
-        click.style(c.replace("is_", ""), bold=True)
+        c.replace("is_", "")
+        if plain_text
+        else click.style(c.replace("is_", ""), bold=True)
         for c in (("#", *columns) if enumerate_ else columns)
     ]
 
@@ -206,7 +205,7 @@ def create_objects_display(
                 row.append(str(value))
         contents.append(row)
 
-    if not format:
+    if not format or plain_text:
         objs_list: list[str] = ["\t".join(c) for c in contents]
         return "\n".join(objs_list)
 

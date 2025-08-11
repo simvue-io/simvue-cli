@@ -405,6 +405,20 @@ def create_simvue_s3_storage(
     return _storage
 
 
+def create_simvue_tag(
+    name: str,
+    color: str | None,
+    description: str | None,
+) -> Tag:
+    _tag = Tag.new(name=name)
+    if color:
+        _tag.colour = color
+    if description:
+        _tag.description = description
+    _tag.commit()
+    return _tag
+
+
 def create_user_alert(
     name: str, trigger_abort: bool, email_notify: bool, description: str | None
 ) -> Alert:
@@ -583,6 +597,11 @@ def get_storage(storage_id: str) -> Storage:
 def get_user(user_id: str) -> User:
     """Retrieve a user from the server"""
     return User(identifier=user_id)
+
+
+def get_artifact(artifact_id: str) -> Tag:
+    """Retrieve an artifact from the server"""
+    return Artifact(identifier=artifact_id)
 
 
 def delete_tenant(tenant_id: str) -> None:

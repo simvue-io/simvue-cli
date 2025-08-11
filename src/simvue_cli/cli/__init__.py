@@ -25,7 +25,7 @@ import importlib.metadata
 import tabulate
 import requests
 import simvue as simvue_client
-from simvue.api.objects import Alert, Run, Folder, S3Storage, Tag, Storage
+from simvue.api.objects import Alert, Run, Folder, S3Storage, Tag, Storage, Artifact
 from simvue.api.objects.administrator import User, Tenant
 from simvue.exception import ObjectNotFoundError
 
@@ -910,8 +910,25 @@ def get_folder_json(folder_id: str) -> None:
 @simvue.group("tag")
 @click.pass_context
 def simvue_tag(ctx) -> None:
-    """Create or retrieve Simvue runs"""
+    """Create or retrieve Simvue tags"""
     pass
+
+
+@simvue_tag.command("create")
+@click.pass_context
+@click.argument("name", type=SimvueName)
+@click.option(
+    "--color",
+    type=str,
+    default=None,
+    help="Color for this tag, e.g. '#fffff', 'blue', 'rgb(23, 54, 34)'",
+)
+@click.option("--description", type=str, default=None, help="Description for this tag.")
+def create_tag(ctx, **kwargs) -> None:
+    """Create a tag"""
+    result = simvue_cli.actions.create_simvue_tag(**kwargs)
+    alert_id = result.id
+    click.echo(alert_id if ctx.obj["plain"] else click.style(alert_id))
 
 
 @simvue_tag.command("list")
@@ -961,6 +978,7 @@ def tag_list(
     color: bool,
     **kwargs,
 ) -> None:
+    """Retrieve tags list from Simvue server."""
     tags = simvue_cli.actions.get_tag_list(**kwargs)
     if not tags:
         return
@@ -1005,6 +1023,60 @@ def get_tag_json(tag_id: str) -> None:
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve tag '{tag_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
+
+
+@simvue_tag.command("remove")
+@click.pass_context
+@click.argument("tag_ids", type=str, nargs=-1, required=False)
+@click.option(
+    "-i",
+    "--interactive",
+    help="Prompt for confirmation on removal",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+def delete_tag(ctx, tag_ids: list[str] | None, interactive: bool) -> None:
+    """Remove a tag from the Simvue server"""
+    if not tag_ids:
+        tag_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            tag_ids += [k.strip() for k in line.split(" ")]
+
+    for tag_id in tag_ids:
+        try:
+            simvue_cli.actions.get_tag(tag_id)
+        except (ObjectNotFoundError, RuntimeError):
+            error_msg = f"Tag '{tag_id}' not found"
+            if ctx.obj["plain"]:
+                print(error_msg)
+            else:
+                click.secho(error_msg, fg="red", bold=True)
+            sys.exit(1)
+
+        if interactive:
+            remove = click.confirm(f"Remove tag '{tag_id}'?")
+            if not remove:
+                continue
+
+        try:
+            simvue_cli.actions.delete_tag(tag_id)
+        except ValueError as e:
+            click.echo(
+                e.args[0]
+                if ctx.obj["plain"]
+                else click.style(e.args[0], fg="red", bold=True)
+            )
+            sys.exit(1)
+
+        response_message = f"Tag '{tag_id}' removed successfully."
+
+        if ctx.obj["plain"]:
+            print(response_message)
+        else:
+            click.secho(response_message, bold=True, fg="green")
 
 
 @simvue.group("admin")
@@ -1619,7 +1691,9 @@ def list_storages(
     help="Specify target language",
     type=click.Choice(["python", "rust", "julia", "nodejs"]),
 )
-@click.option("--run", required=True, help="ID of run to clone environment from")
+@click.option(
+    "--run", required=False, help="ID of run to clone environment from", default=""
+)
 @click.option(
     "--allow-existing",
     is_flag=True,
@@ -1627,7 +1701,13 @@ def list_storages(
 )
 @click.argument("venv_directory", type=click.Path(exists=False))
 def venv_setup(ctx, **kwargs) -> None:
-    """Initialise virtual environments from run metadata."""
+    """Initialise virtual environments from run metadata.
+
+    If a run ID is not provided via --run it is read from stdin.
+    """
+    if not kwargs.get("run"):
+        kwargs["run"] = input()
+
     try:
         simvue_cli.actions.create_environment(**kwargs)
     except (FileExistsError, RuntimeError) as e:
@@ -1744,6 +1824,26 @@ def artifact_list(
         format=table_format,
     )
     click.echo(table)
+
+
+@simvue_artifact.command("json")
+@click.pass_context
+@click.argument("artifact_id", required=False)
+def get_artifact_json(ctx, artifact_id: str) -> None:
+    """Retrieve artifact information from Simvue server
+
+    If no ARTIFACT_ID is provided the input is read from stdin
+    """
+    if not artifact_id:
+        artifact_id = input()
+
+    try:
+        artifact: Artifact = simvue_cli.actions.get_artifact(artifact_id)
+        artifact_info = artifact.to_dict()
+        click.echo(json.dumps(dict(artifact_info.items()), indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve artifact '{artifact_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
 
 
 if __name__ in "__main__":
