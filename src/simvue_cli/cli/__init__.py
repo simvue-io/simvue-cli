@@ -1179,7 +1179,7 @@ def tenant_list(
     if name:
         columns.append("name")
     if enabled:
-        columns.append("enabled")
+        columns.append("is_enabled")
     if max_runs:
         columns.append("max_runs")
     if max_data_volume:
@@ -1268,13 +1268,13 @@ def list_user(
     if full_name:
         columns.append("fullname")
     if admin:
-        columns.append("admin")
+        columns.append("is_admin")
     if manager:
-        columns.append("manager")
+        columns.append("is_manager")
     if enabled:
-        columns.append("enabled")
+        columns.append("is_enabled")
     if read_only:
-        columns.append("readonly")
+        columns.append("is_readonly")
     if deleted:
         columns.append("deleted")
 

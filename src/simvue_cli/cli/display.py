@@ -176,8 +176,11 @@ def create_objects_display(
 
     if plain_text:
         return " ".join(obj.id for _, obj in objects)
+
+    # Remove 'is_' prefix from relevant columns and format
     table_headers = [
-        click.style(c, bold=True) for c in (("#", *columns) if enumerate_ else columns)
+        click.style(c.replace("is_", ""), bold=True)
+        for c in (("#", *columns) if enumerate_ else columns)
     ]
 
     contents: list[list[str]] = []
