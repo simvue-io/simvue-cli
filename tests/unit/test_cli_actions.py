@@ -141,11 +141,12 @@ def test_storage() -> None:
 def test_user_and_tenant_creation() -> None:
     _tenant_name = "simvue_cli_tenant"
     _user_name = "jbloggs"
+    _uuid = f"{uuid.uuid4()}".split("-")[0]
     _tenant = simvue_cli.actions.create_simvue_tenant(
         max_request_rate=1,
         max_runs=1,
         max_data_volume=1,
-        name=_tenant_name,
+        name=f"{_tenant_name}_{_uuid}",
         disabled=True,
     )
     assert _tenant.id
