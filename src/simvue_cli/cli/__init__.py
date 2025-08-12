@@ -277,7 +277,7 @@ def create_run(
     is_flag=True,
 )
 def delete_run(ctx, run_ids: list[str] | None, interactive: bool) -> None:
-    """Remove a runs from the Simvue server"""
+    """Remove runs from the Simvue server"""
     if not run_ids:
         run_ids = []
         for line in sys.stdin:
@@ -611,6 +611,9 @@ def get_run_artifacts(
 )
 @click.argument("run_id", required=False)
 def pull_simvue_run(ctx, output_dir: str, run_id: str) -> None:
+    """Retrieve artifacts for the given Simvue run.
+
+    Downloads the artifacts to the specified directory."""
     if not run_id:
         run_id = input()
 
@@ -1581,6 +1584,7 @@ def get_user_json(user_id: str) -> None:
 )
 @click.option("--welcome", is_flag=True, default=False, help="display welcome message")
 def add_user(ctx, **kwargs) -> None:
+    """Create a new Simvue user under the given tenant."""
     user: User = simvue_cli.actions.create_simvue_user(**kwargs)
     click.echo(user.id if ctx.obj["plain"] else click.style(user.id))
 
