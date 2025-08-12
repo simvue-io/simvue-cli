@@ -2,12 +2,14 @@ import tempfile
 import time
 import re
 import pathlib
+import typing
 import pytest
 import uuid
 import os
 import simvue
 from simvue.api.objects import Alert, Run, Events, Storage, Tenant, User
 from simvue.exception import ObjectNotFoundError
+from simvue.run import UserAlert
 import simvue_cli.actions
 
 
@@ -19,13 +21,30 @@ def test_object_list(create_plain_run, object) -> None:
     assert next(getattr(simvue_cli.actions, f"get_{object}_list")(count=10, sort_by=["created"], reverse=False))
 
 
-def test_run_deletion(create_plain_run) -> None:
-    _run: simvue.Run
-    _run, _ = create_plain_run
-    _id = _run.id
-    _run.close()
+def test_run_deletion(request) -> None:
+    with simvue.Run() as run:
+        fix_use_id: str = str(uuid.uuid4()).split('-', 1)[0]
+        _test_name: str = request.node.name.replace("[", "_").replace("]", "")
+        TEST_DATA = {
+            "event_contains": "sent event",
+            "metadata": {
+                "test_engine": "pytest",
+                "test_identifier": f"{_test_name}_{fix_use_id}"
+            },
+            "folder": f"/simvue_cli_testing/{fix_use_id}",
+            "tags": ["simvue_cli_testing", _test_name], 
+        }
+        run.init(
+            name=_test_name,
+            tags=TEST_DATA["tags"],
+            folder=TEST_DATA["folder"],
+            visibility="tenant" if os.environ.get("CI") else None,
+            retention_period="5 minutes",
+            timeout=15,
+            no_color=True
+        )
     time.sleep(1)
-    simvue_cli.actions.delete_run(_id)
+    simvue_cli.actions.delete_run(run.id)
 
 
 def test_user_alerts() -> None:
@@ -172,4 +191,24 @@ def test_run_artifact_download(create_test_run) -> None:
         _basenames = [f.name for f in _out_dir.joinpath(_data["folder"][1:]).glob("*")]
         assert all(f.name in _basenames for f in _files)
         assert all(_data[f"file_{i}"] in _basenames for i in range(1, 4))
+
+
+@pytest.mark.parametrize(
+    "status", ("ok", "critical")
+)
+def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status: typing.Literal["ok", "critical"]) -> None:
+    run, _ = create_plain_run
+    _alert_id = run.create_user_alert(
+        name="test_user_alert_triggered_alert",
+        description="Test alert for CLI triggering",
+        trigger_abort=True
+    )
+    simvue_cli.actions.trigger_user_alert(
+        run.id,
+        _alert_id,
+        status
+    )
+    _alert: UserAlert = Alert(_alert_id)
+    assert _alert.get_status(run.id) == status
+>>>>>>> dev
 

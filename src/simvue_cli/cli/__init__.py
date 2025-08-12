@@ -132,14 +132,20 @@ def whoami(user: bool, tenant: bool) -> None:
 def about_simvue(ctx) -> None:
     """Display full information on Simvue instance"""
     width = shutil.get_terminal_size().columns
-    click.echo(
-        "\n".join(f"{'\t' * int(0.015 * width)}{r}" for r in SIMVUE_LOGO.split("\n"))
-    )
-    click.echo(f"\n{width * '='}\n")
-    click.echo(f"\n{'\t' * int(0.04 * width)} Provided under the Apache-2.0 License")
-    click.echo(
-        f"{'\t' * int(0.04 * width)}© Copyright {datetime.datetime.now().strftime('%Y')} Simvue Development Team\n"
-    )
+    if not ctx.obj.get("plain"):
+        click.echo(
+            "\n".join(
+                "\t" * int(0.015 * width) + f"{r}" for r in SIMVUE_LOGO.split("\n")
+            )
+        )
+        click.echo(f"\n{width * '='}\n")
+        click.echo(
+            "\n" + "\t" * int(0.04 * width) + "Provided under the Apache-2.0 License"
+        )
+        click.echo(
+            "\t" * int(0.04 * width)
+            + f"© Copyright {datetime.datetime.now().strftime('%Y')} Simvue Development Team\n"
+        )
     out_table: list[list[str]] = []
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
         out_table.append(
@@ -154,15 +160,18 @@ def about_simvue(ctx) -> None:
         if isinstance(server_version, int):
             raise RuntimeError
         out_table.append(["Server Version: ", server_version])
-    click.echo(
-        "\n".join(
-            f"{'\t' * int(0.045 * width)}{r}"
-            for r in tabulate.tabulate(out_table, tablefmt="plain")
-            .__str__()
-            .split("\n")
+    if not ctx.obj.get("plain"):
+        click.echo(
+            "\n".join(
+                "\t" * int(0.045 * width) + f"{r}"
+                for r in tabulate.tabulate(out_table, tablefmt="plain")
+                .__str__()
+                .split("\n")
+            )
         )
-    )
-    click.echo(f"\n{width * '='}\n")
+        click.echo(f"\n{width * '='}\n")
+    else:
+        click.echo(tabulate.tabulate(out_table, tablefmt="plain").__str__())
 
 
 @simvue.group("config")
@@ -631,11 +640,11 @@ def purge_simvue(ctx) -> None:
     """Remove all local Simvue files"""
     local_files_exist: bool = False
     if (user_simvue_directory := pathlib.Path().home().joinpath(".simvue")).exists():
-        logger.info(f"Removing '{user_simvue_directory}'")
+        click.echo(f"Removing '{user_simvue_directory}'")
         shutil.rmtree(user_simvue_directory)
         local_files_exist = True
     if (global_simvue_file := pathlib.Path().home().joinpath(".simvue.toml")).exists():
-        logger.info(f"Removing global Simvue configuration '{global_simvue_file}'")
+        click.echo(f"Removing global Simvue configuration '{global_simvue_file}'")
         global_simvue_file.unlink()
         local_files_exist = True
 
@@ -651,6 +660,31 @@ def purge_simvue(ctx) -> None:
 def simvue_alert(ctx) -> None:
     """Create and list Simvue alerts"""
     pass
+
+
+@simvue_alert.command("trigger")
+@click.pass_context
+@click.argument("run_id")
+@click.argument("alert_id")
+@click.option(
+    "--ok",
+    "is_ok",
+    is_flag=True,
+    help="Set alert to status 'ok' as opposed to critical.",
+    show_default=True,
+)
+def trigger_alert(ctx, is_ok: bool, **kwargs) -> None:
+    """Trigger a user alert"""
+    try:
+        simvue_cli.actions.trigger_user_alert(
+            status="ok" if is_ok else "critical", **kwargs
+        )
+    except ValueError as e:
+        if ctx.obj["plain"]:
+            print(e.args[0])
+        else:
+            click.secho(e.args[0], fg="red", bold=True)
+        sys.exit(1)
 
 
 @simvue_alert.command("list")
@@ -1031,8 +1065,25 @@ def get_folder_json(folder_id: str) -> None:
 @simvue.group("tag")
 @click.pass_context
 def simvue_tag(ctx) -> None:
-    """Create or retrieve Simvue runs"""
+    """Create or retrieve Simvue tags"""
     pass
+
+
+@simvue_tag.command("create")
+@click.pass_context
+@click.argument("name", type=SimvueName)
+@click.option(
+    "--color",
+    type=str,
+    default=None,
+    help="Color for this tag, e.g. '#fffff', 'blue', 'rgb(23, 54, 34)'",
+)
+@click.option("--description", type=str, default=None, help="Description for this tag.")
+def create_tag(ctx, **kwargs) -> None:
+    """Create a tag"""
+    result = simvue_cli.actions.create_simvue_tag(**kwargs)
+    alert_id = result.id
+    click.echo(alert_id if ctx.obj["plain"] else click.style(alert_id))
 
 
 @simvue_tag.command("list")
@@ -1061,6 +1112,7 @@ def simvue_tag(ctx) -> None:
     show_default=True,
 )
 @click.option("--name", is_flag=True, help="Show names")
+@click.option("--description", is_flag=True, help="Show descriptions")
 @click.option("--color", is_flag=True, help="Show hex colors")
 @click.option(
     "--sort-by",
@@ -1073,14 +1125,15 @@ def simvue_tag(ctx) -> None:
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 def tag_list(
     ctx,
-    count: int,
     enumerate_: bool,
     created: bool,
     table_format: str | None,
     name: bool,
+    description: bool,
     color: bool,
     **kwargs,
 ) -> None:
+    """Retrieve tags list from Simvue server."""
     tags = simvue_cli.actions.get_tag_list(**kwargs)
     if not tags:
         return
@@ -1094,6 +1147,9 @@ def tag_list(
 
     if color:
         columns.append("colour")
+
+    if name:
+        columns.append("description")
 
     table = create_objects_display(
         columns,
@@ -1122,6 +1178,60 @@ def get_tag_json(tag_id: str) -> None:
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve tag '{tag_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
+
+
+@simvue_tag.command("remove")
+@click.pass_context
+@click.argument("tag_ids", type=str, nargs=-1, required=False)
+@click.option(
+    "-i",
+    "--interactive",
+    help="Prompt for confirmation on removal",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+def delete_tag(ctx, tag_ids: list[str] | None, interactive: bool) -> None:
+    """Remove a tag from the Simvue server"""
+    if not tag_ids:
+        tag_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            tag_ids += [k.strip() for k in line.split(" ")]
+
+    for tag_id in tag_ids:
+        try:
+            simvue_cli.actions.get_tag(tag_id)
+        except (ObjectNotFoundError, RuntimeError):
+            error_msg = f"Tag '{tag_id}' not found"
+            if ctx.obj["plain"]:
+                print(error_msg)
+            else:
+                click.secho(error_msg, fg="red", bold=True)
+            sys.exit(1)
+
+        if interactive:
+            remove = click.confirm(f"Remove tag '{tag_id}'?")
+            if not remove:
+                continue
+
+        try:
+            simvue_cli.actions.delete_tag(tag_id)
+        except ValueError as e:
+            click.echo(
+                e.args[0]
+                if ctx.obj["plain"]
+                else click.style(e.args[0], fg="red", bold=True)
+            )
+            sys.exit(1)
+
+        response_message = f"Tag '{tag_id}' removed successfully."
+
+        if ctx.obj["plain"]:
+            print(response_message)
+        else:
+            click.secho(response_message, bold=True, fg="green")
 
 
 @simvue.group("admin")
@@ -1209,6 +1319,16 @@ def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
                 continue
             tenant_ids += [k.strip() for k in line.split(" ")]
 
+    _total_tenants = simvue_cli.actions.count_tenants()
+
+    if _total_tenants < 2:
+        error_msg = "Attempting to delete single remaining tenant on server."
+        if ctx.obj["plain"]:
+            print(error_msg)
+        else:
+            click.secho(error_msg, fg="red", bold=True)
+        sys.exit(1)
+
     for tenant_id in tenant_ids:
         try:
             simvue_cli.actions.get_tenant(tenant_id)
@@ -1277,7 +1397,6 @@ def tenant_list(
     ctx,
     table_format: str,
     enumerate_: bool,
-    count: int,
     max_runs: bool,
     max_data_volume: bool,
     max_request_rate: bool,
@@ -1297,7 +1416,7 @@ def tenant_list(
     if name:
         columns.append("name")
     if enabled:
-        columns.append("enabled")
+        columns.append("is_enabled")
     if max_runs:
         columns.append("max_runs")
     if max_data_volume:
@@ -1361,7 +1480,6 @@ def user(ctx) -> None:
 def list_user(
     ctx,
     enumerate_: bool,
-    count: int,
     table_format: str | None,
     username: bool,
     email: bool,
@@ -1387,15 +1505,15 @@ def list_user(
     if full_name:
         columns.append("fullname")
     if admin:
-        columns.append("admin")
+        columns.append("is_admin")
     if manager:
-        columns.append("manager")
+        columns.append("is_manager")
     if enabled:
-        columns.append("enabled")
+        columns.append("is_enabled")
     if read_only:
-        columns.append("readonly")
+        columns.append("is_readonly")
     if deleted:
-        columns.append("deleted")
+        columns.append("is_deleted")
 
     table = create_objects_display(
         columns,
@@ -1716,9 +1834,11 @@ def list_storages(
     if backend:
         columns.append("backend")
     if tenant_usable:
-        columns.append("tenant_usable")
+        columns.append("is_tenant_useable")
     if default:
-        columns.append("default")
+        columns.append("is_default")
+    if enabled:
+        columns.append("is_enabled")
 
     table = create_objects_display(
         columns,
@@ -1738,7 +1858,9 @@ def list_storages(
     help="Specify target language",
     type=click.Choice(["python", "rust", "julia", "nodejs"]),
 )
-@click.option("--run", required=True, help="ID of run to clone environment from")
+@click.option(
+    "--run", required=False, help="ID of run to clone environment from", default=""
+)
 @click.option(
     "--allow-existing",
     is_flag=True,
@@ -1746,7 +1868,13 @@ def list_storages(
 )
 @click.argument("venv_directory", type=click.Path(exists=False))
 def venv_setup(ctx, **kwargs) -> None:
-    """Initialise virtual environments from run metadata."""
+    """Initialise virtual environments from run metadata.
+
+    If a run ID is not provided via --run it is read from stdin.
+    """
+    if not kwargs.get("run"):
+        kwargs["run"] = input()
+
     try:
         simvue_cli.actions.create_environment(**kwargs)
     except (FileExistsError, RuntimeError) as e:
@@ -1836,10 +1964,9 @@ def get_artifact_json(artifact_id: str) -> None:
     show_default=True,
 )
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
-@click.pass_context
 def artifact_list(
     ctx,
-    table_format: str,
+    table_format: str | None,
     enumerate_: bool,
     original_path: bool,
     storage: bool,
@@ -1865,7 +1992,7 @@ def artifact_list(
     if original_path:
         columns.append("original_path")
     if storage:
-        columns.append("storage")
+        columns.append("storage_id")
     if uploaded:
         columns.append("uploaded")
     if mime_type:
@@ -1883,6 +2010,26 @@ def artifact_list(
         format=table_format,
     )
     click.echo(table)
+
+
+@simvue_artifact.command("json")
+@click.pass_context
+@click.argument("artifact_id", required=False)
+def get_artifact_json(ctx, artifact_id: str) -> None:
+    """Retrieve artifact information from Simvue server
+
+    If no ARTIFACT_ID is provided the input is read from stdin
+    """
+    if not artifact_id:
+        artifact_id = input()
+
+    try:
+        artifact: Artifact = simvue_cli.actions.get_artifact(artifact_id)
+        artifact_info = artifact.to_dict()
+        click.echo(json.dumps(dict(artifact_info.items()), indent=2))
+    except ObjectNotFoundError as e:
+        error_msg = f"Failed to retrieve artifact '{artifact_id}': {e.args[0]}"
+        click.echo(error_msg, fg="red", bold=True)
 
 
 if __name__ in "__main__":

@@ -412,6 +412,20 @@ def create_simvue_s3_storage(
     return _storage
 
 
+def create_simvue_tag(
+    name: str,
+    color: str | None,
+    description: str | None,
+) -> Tag:
+    _tag = Tag.new(name=name)
+    if color:
+        _tag.colour = color
+    if description:
+        _tag.description = description
+    _tag.commit()
+    return _tag
+
+
 def create_user_alert(
     name: str, trigger_abort: bool, email_notify: bool, description: str | None
 ) -> Alert:
@@ -441,6 +455,31 @@ def create_user_alert(
     _alert.abort = trigger_abort
     _alert.commit()
     return _alert
+
+
+def trigger_user_alert(
+    run_id: str, alert_id: str, status: typing.Literal["ok", "critical"]
+) -> None:
+    """Trigger a manually defined user alert.
+
+    Parameters
+    ----------
+    run_id: str
+        the unique identifier for the run to alert on
+    alert_id : str
+        the unique identifier for the alert
+    status: Literal['ok', 'critical']
+        the state to set the alert to
+
+    """
+    _alert = get_alert(alert_id=alert_id)
+
+    if not isinstance(_alert, UserAlert):
+        raise ValueError(f"Alert '{alert_id}' is not a user alert.")
+
+    _alert.read_only(False)
+    _alert.set_status(run_id=run_id, status=status)
+    _alert.commit()
 
 
 def create_simvue_user(
@@ -542,6 +581,13 @@ def get_tenant(tenant_id: str) -> Tenant:
     return Tenant(identifier=tenant_id)
 
 
+def count_tenants() -> int:
+    try:
+        return len(Tenant.get())
+    except StopIteration:
+        return 0
+
+
 def get_folder(folder_id: str) -> Folder:
     """Retrieve a folder from the server"""
     return Folder(identifier=folder_id)
@@ -565,6 +611,11 @@ def get_storage(storage_id: str) -> Storage:
 def get_user(user_id: str) -> User:
     """Retrieve a user from the server"""
     return User(identifier=user_id)
+
+
+def get_artifact(artifact_id: str) -> Tag:
+    """Retrieve an artifact from the server"""
+    return Artifact(identifier=artifact_id)
 
 
 def delete_tenant(tenant_id: str) -> None:
