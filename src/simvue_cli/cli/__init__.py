@@ -617,7 +617,7 @@ def pull_simvue_run(ctx, output_dir: str, run_id: str) -> None:
     try:
         _downloaded_files: list[pathlib.Path] = simvue_cli.actions.pull_run(
             run_id=run_id,
-            output_dir=output_dir.format(run_id=run_id),
+            output_dir=pathlib.Path(output_dir.format(run_id=run_id)),
             plain=ctx.obj["plain"],
         )
         if not _downloaded_files:

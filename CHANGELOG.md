@@ -2,6 +2,7 @@
 
 - Various fixes to columns in `list` sub-commands, this includes fixing `N/A` where data could not be found.
 - `--plain` mode now displays all data as expected, with formatting disabled.
+- Add `run pull` command for retrieving artifacts.
 - Added additional sub-commands for `Tag` type.
 
 # [v1.0.1](https://github.com/simvue-io/simvue-cli/releases/tag/v1.0.1) - 2025-03-31

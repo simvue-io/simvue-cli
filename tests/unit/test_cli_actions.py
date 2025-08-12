@@ -210,5 +210,4 @@ def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status:
     )
     _alert: UserAlert = Alert(_alert_id)
     assert _alert.get_status(run.id) == status
->>>>>>> dev
 
