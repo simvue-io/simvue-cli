@@ -36,7 +36,7 @@ STATUS_FORMAT: dict[str, str] = {
     "running": "blue",
     "failed": "red",
     "completed": "green",
-    "lost": "orange",
+    "lost": "yellow",
     "created": "white",
     "N/A": "grey",
     "terminated": "red",
