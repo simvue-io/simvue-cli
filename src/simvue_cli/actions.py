@@ -382,6 +382,12 @@ def delete_run(run_id: str) -> None:
     _run.delete()
 
 
+def delete_tag(tag_id: str) -> None:
+    """Delete a given tag from the Simvue server"""
+    _tag = get_tag(tag_id)
+    _tag.delete()
+
+
 def delete_storage(storage_id: str) -> None:
     """Delete a given storage from the Simvue server"""
     _storage = get_storage(storage_id)
@@ -583,7 +589,7 @@ def get_tenant(tenant_id: str) -> Tenant:
 
 def count_tenants() -> int:
     try:
-        return len(Tenant.get())
+        return Tenant.count(count=None, offset=None)
     except StopIteration:
         return 0
 
