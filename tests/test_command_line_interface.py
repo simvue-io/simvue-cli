@@ -322,10 +322,23 @@ def test_folder_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
     assert run_data["folder"] in result.output
 
 
-def test_tag_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
+def test_tag(create_plain_run: tuple[simvue.Run, dict]) -> None:
     run, run_data = create_plain_run
     assert run.id
     runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "tag",
+            "create",
+            "--color='cyan'",
+            "--description='CLI test tag'",
+            "simvue_cli_test",
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    _id = result.output.strip()
     result = runner.invoke(
         sv_cli.simvue,
         [
@@ -336,11 +349,35 @@ def test_tag_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
             "--color",
             "--enumerate",
             f"--format=simple"
-        ]
+        ],
+        catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
     for tag in run_data["tags"]:
         assert tag in result.output
+    assert _id in result.output
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "tag",
+            "json",
+            _id
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "tag",
+            "remove",
+            _id
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert f"'{_id}' removed successfully" in result.output
 
 
 def test_artifact_list(create_test_run: tuple[simvue.Run, dict]) -> None:

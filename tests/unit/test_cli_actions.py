@@ -21,13 +21,30 @@ def test_object_list(create_plain_run, object) -> None:
     assert next(getattr(simvue_cli.actions, f"get_{object}_list")(count=10, sort_by=["created"], reverse=False))
 
 
-def test_run_deletion(create_plain_run) -> None:
-    _run: simvue.Run
-    _run, _ = create_plain_run
-    _id = _run.id
-    _run.close()
+def test_run_deletion(request) -> None:
+    with simvue.Run() as run:
+        fix_use_id: str = str(uuid.uuid4()).split('-', 1)[0]
+        _test_name: str = request.node.name.replace("[", "_").replace("]", "")
+        TEST_DATA = {
+            "event_contains": "sent event",
+            "metadata": {
+                "test_engine": "pytest",
+                "test_identifier": f"{_test_name}_{fix_use_id}"
+            },
+            "folder": f"/simvue_cli_testing/{fix_use_id}",
+            "tags": ["simvue_cli_testing", _test_name], 
+        }
+        run.init(
+            name=_test_name,
+            tags=TEST_DATA["tags"],
+            folder=TEST_DATA["folder"],
+            visibility="tenant" if os.environ.get("CI") else None,
+            retention_period="5 minutes",
+            timeout=15,
+            no_color=True
+        )
     time.sleep(1)
-    simvue_cli.actions.delete_run(_id)
+    simvue_cli.actions.delete_run(run.id)
 
 
 def test_user_alerts() -> None:
@@ -181,3 +198,4 @@ def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status:
     )
     _alert: UserAlert = Alert(_alert_id)
     assert _alert.get_status(run.id) == status
+

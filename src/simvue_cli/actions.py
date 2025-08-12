@@ -574,6 +574,13 @@ def get_tenant(tenant_id: str) -> Tenant:
     return Tenant(identifier=tenant_id)
 
 
+def count_tenants() -> int:
+    try:
+        return len(Tenant.get())
+    except StopIteration:
+        return 0
+
+
 def get_folder(folder_id: str) -> Folder:
     """Retrieve a folder from the server"""
     return Folder(identifier=folder_id)

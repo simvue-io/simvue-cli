@@ -132,17 +132,20 @@ def whoami(user: bool, tenant: bool) -> None:
 def about_simvue(ctx) -> None:
     """Display full information on Simvue instance"""
     width = shutil.get_terminal_size().columns
-    click.echo(
-        "\n".join("\t" * int(0.015 * width) + f"{r}" for r in SIMVUE_LOGO.split("\n"))
-    )
-    click.echo(f"\n{width * '='}\n")
-    click.echo(
-        "\n" + "\t" * int(0.04 * width) + "Provided under the Apache-2.0 License"
-    )
-    click.echo(
-        "\t" * int(0.04 * width)
-        + f"© Copyright {datetime.datetime.now().strftime('%Y')} Simvue Development Team\n"
-    )
+    if not ctx.obj.get("plain"):
+        click.echo(
+            "\n".join(
+                "\t" * int(0.015 * width) + f"{r}" for r in SIMVUE_LOGO.split("\n")
+            )
+        )
+        click.echo(f"\n{width * '='}\n")
+        click.echo(
+            "\n" + "\t" * int(0.04 * width) + "Provided under the Apache-2.0 License"
+        )
+        click.echo(
+            "\t" * int(0.04 * width)
+            + f"© Copyright {datetime.datetime.now().strftime('%Y')} Simvue Development Team\n"
+        )
     out_table: list[list[str]] = []
     with contextlib.suppress(importlib.metadata.PackageNotFoundError):
         out_table.append(
@@ -157,15 +160,18 @@ def about_simvue(ctx) -> None:
         if isinstance(server_version, int):
             raise RuntimeError
         out_table.append(["Server Version: ", server_version])
-    click.echo(
-        "\n".join(
-            "\t" * int(0.045 * width) + f"{r}"
-            for r in tabulate.tabulate(out_table, tablefmt="plain")
-            .__str__()
-            .split("\n")
+    if not ctx.obj.get("plain"):
+        click.echo(
+            "\n".join(
+                "\t" * int(0.045 * width) + f"{r}"
+                for r in tabulate.tabulate(out_table, tablefmt="plain")
+                .__str__()
+                .split("\n")
+            )
         )
-    )
-    click.echo(f"\n{width * '='}\n")
+        click.echo(f"\n{width * '='}\n")
+    else:
+        click.echo(tabulate.tabulate(out_table, tablefmt="plain").__str__())
 
 
 @simvue.group("config")
@@ -485,11 +491,11 @@ def purge_simvue(ctx) -> None:
     """Remove all local Simvue files"""
     local_files_exist: bool = False
     if (user_simvue_directory := pathlib.Path().home().joinpath(".simvue")).exists():
-        logger.info(f"Removing '{user_simvue_directory}'")
+        click.echo(f"Removing '{user_simvue_directory}'")
         shutil.rmtree(user_simvue_directory)
         local_files_exist = True
     if (global_simvue_file := pathlib.Path().home().joinpath(".simvue.toml")).exists():
-        logger.info(f"Removing global Simvue configuration '{global_simvue_file}'")
+        click.echo(f"Removing global Simvue configuration '{global_simvue_file}'")
         global_simvue_file.unlink()
         local_files_exist = True
 
@@ -1164,6 +1170,16 @@ def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
                 continue
             tenant_ids += [k.strip() for k in line.split(" ")]
 
+    _total_tenants = simvue_cli.actions.count_tenants()
+
+    if _total_tenants < 2:
+        error_msg = "Attempting to delete single remaining tenant on server."
+        if ctx.obj["plain"]:
+            print(error_msg)
+        else:
+            click.secho(error_msg, fg="red", bold=True)
+        sys.exit(1)
+
     for tenant_id in tenant_ids:
         try:
             simvue_cli.actions.get_tenant(tenant_id)
@@ -1348,7 +1364,7 @@ def list_user(
     if read_only:
         columns.append("is_readonly")
     if deleted:
-        columns.append("deleted")
+        columns.append("is_deleted")
 
     table = create_objects_display(
         columns,
@@ -1669,9 +1685,11 @@ def list_storages(
     if backend:
         columns.append("backend")
     if tenant_usable:
-        columns.append("tenant_usable")
+        columns.append("is_tenant_useable")
     if default:
-        columns.append("default")
+        columns.append("is_default")
+    if enabled:
+        columns.append("is_enabled")
 
     table = create_objects_display(
         columns,
@@ -1806,7 +1824,7 @@ def artifact_list(
     if original_path:
         columns.append("original_path")
     if storage:
-        columns.append("storage")
+        columns.append("storage_id")
     if uploaded:
         columns.append("uploaded")
     if mime_type:
