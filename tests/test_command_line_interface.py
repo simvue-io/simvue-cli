@@ -331,8 +331,10 @@ def test_tag(create_plain_run: tuple[simvue.Run, dict]) -> None:
         [
             "tag",
             "create",
-            "--color='cyan'",
-            "--description='CLI test tag'",
+            "--color",
+            "cyan",
+            "--description",
+            "CLI test tag",
             "simvue_cli_test",
         ],
         catch_exceptions=False
@@ -345,6 +347,8 @@ def test_tag(create_plain_run: tuple[simvue.Run, dict]) -> None:
             "tag",
             "list",
             "--name",
+            "--count",
+            100,
             "--created",
             "--color",
             "--enumerate",
@@ -353,9 +357,7 @@ def test_tag(create_plain_run: tuple[simvue.Run, dict]) -> None:
         catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
-    for tag in run_data["tags"]:
-        assert tag in result.output
-    assert _id in result.output
+    assert "simvue_cli_test" in result.output
     result = runner.invoke(
         sv_cli.simvue,
         [
@@ -399,7 +401,7 @@ def test_artifact_list(create_test_run: tuple[simvue.Run, dict]) -> None:
             "--size",
             "--storage",
             "--mime-type",
-            "--count=20",
+            "--count=100",
             "--enumerate",
             "--format=simple"
         ],

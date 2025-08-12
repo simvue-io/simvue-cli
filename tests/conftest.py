@@ -27,9 +27,6 @@ def create_test_run(request, monkeypatch) -> typing.Generator[typing.Tuple[sv_ru
         _setup_run = setup_test_run(run, True, request)
         yield run, _setup_run
 
-    # Then yield it closed
-    yield run, _setup_run
-
 
 def setup_test_run(run: sv_run.Run, create_objects: bool, request: pytest.FixtureRequest):
     fix_use_id: str = str(uuid.uuid4()).split('-', 1)[0]
