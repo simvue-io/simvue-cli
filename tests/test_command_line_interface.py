@@ -706,3 +706,40 @@ def test_purge(monkeypatch) -> None:
         assert f"{_test_dir.joinpath('.simvue.toml')}" in result.stdout
         assert not _test_dir.joinpath(".simvue").exists()
         assert not _test_dir.joinpath(".simvue.toml").exists()
+
+
+@pytest.mark.parametrize(
+    "file_type", ("csv", "json")
+)
+def test_push_metadata_as_runs(file_type: str) -> None:
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "push",
+            "metadata",
+            "--tenant",
+            "--metadata",
+            "{\"batch_number\": 0}",
+            f'{pathlib.Path(__file__).parent.joinpath("data", f"metadata_100.{file_type}")}'
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.stdout
+
+
+def test_push_runs() -> None:
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "push",
+            "runs",
+            "--tenant",
+            "--metadata",
+            "{\"batch_number\": 0}",
+            f'{pathlib.Path(__file__).parent.joinpath("data", "runs_100.json")}'
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.stdout

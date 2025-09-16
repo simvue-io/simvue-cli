@@ -35,7 +35,6 @@ keywords = [
 dependencies = [
     "click-option-group>=0.5.7",
     "click>=8.1.8",
-    "simvue>=2.1.1",
     "click-log>=0.4.0",
     "click-params>=0.5.0",
     "toml>=0.10.2",
@@ -43,6 +42,7 @@ dependencies = [
     "regex>=2024.11.6",
     "requests>=2.32.3",
     "tqdm>=4.67.1",
+    "simvue",
 ]
 
 [project.urls]
@@ -87,3 +87,6 @@ lint = [
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.uv.sources]
+simvue = { git = "https://github.com/simvue-io/python-api", branch = "dev" }

@@ -1,3 +1,4 @@
+import contextlib
 import tempfile
 import time
 import re
@@ -7,7 +8,7 @@ import pytest
 import uuid
 import os
 import simvue
-from simvue.api.objects import Alert, Run, Events, Storage, Tenant, User
+from simvue.api.objects import Alert, Folder, Run, Events, Storage, Tenant, User
 from simvue.exception import ObjectNotFoundError
 from simvue.run import UserAlert
 import simvue_cli.actions
@@ -212,3 +213,47 @@ def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status:
     _alert: UserAlert = Alert(_alert_id)
     assert _alert.get_status(run.id) == status
 
+
+@pytest.mark.parametrize(
+    "file_type", ("csv", "json")
+)
+def test_metadata_push(file_type: str) -> None:
+    _input_file=pathlib.Path(__file__).parents[1].joinpath("data", f"metadata_100.{file_type}")
+    _uuid = f"{uuid.uuid4()}".split("-")[0]
+    _folder_name: str = f"/simvue_cli_testing/{_uuid}"
+    if file_type == "csv":
+        _folder_id = simvue_cli.actions.push_delim_metadata(
+            input_file=_input_file,
+            folder=_folder_name,
+            global_metadata="{\"batch_number\": 0}",
+            public_visible=False,
+            tenant_visible=True,
+            user_list=set(),
+            delimiter=","
+        )
+    else:
+        _folder_id = simvue_cli.actions.push_json_metadata(
+            input_file=_input_file,
+            folder=_folder_name,
+            global_metadata="{\"batch_number\": 0}",
+            public_visible=False,
+            tenant_visible=True,
+            user_list=set()
+        )
+    with contextlib.suppress(Exception):
+        Folder(identifier=_folder_id).delete(delete_runs=True, recursive=True)
+
+
+def test_runs_push() -> None:
+    _uuid = f"{uuid.uuid4()}".split("-")[0]
+    _folder_ids = simvue_cli.actions.push_json_runs(
+        input_file=pathlib.Path(__file__).parents[1].joinpath("data", "runs_100.json"),
+        folder=f"/simvue_cli_testing/{_uuid}",
+        tenant_visible=True,
+        public_visible=False,
+        user_list=set(),
+        global_metadata="{\"batch_number\": 0}",
+    )
+    for folder in _folder_ids:
+        with contextlib.suppress(Exception):
+            Folder(identifier=folder).delete(delete_runs=True, recursive=True)

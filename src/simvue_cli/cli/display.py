@@ -7,12 +7,12 @@ Contains functions to aid in the display of information.
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
-from simvue.factory.proxy import typing
 from simvue.api.objects.base import SimvueObject
 
 import tabulate
+import typing
 import click
-import pydantic
+from pydantic_extra_types.color import RGBA
 
 SIMVUE_LOGO: str = """
 
@@ -78,7 +78,7 @@ def format_status(status: str, plain_text: bool, *_, **__) -> str:
     return click.style(status, fg=STATUS_FORMAT[status], bold=True)
 
 
-def format_color(color: pydantic.color.RGBA, *_, **__) -> str:
+def format_color(color: RGBA, *_, **__) -> str:
     return f"({color.r}, {color.g}, {color.b})"
 
 

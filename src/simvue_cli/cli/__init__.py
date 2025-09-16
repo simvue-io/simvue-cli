@@ -12,6 +12,8 @@ __date__ = "2024-09-09"
 import pathlib
 import sys
 import shutil
+import typing
+from urllib.request import AbstractDigestAuthHandler
 import click
 import json
 import time
@@ -2034,6 +2036,112 @@ def get_artifact_json(ctx, artifact_id: str) -> None:
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve artifact '{artifact_id}': {e.args[0]}"
         click.echo(error_msg, fg="red", bold=True)
+
+
+@simvue.group("push")
+@click.pass_context
+def push(ctx) -> None:
+    """Push local data to the Simvue server."""
+
+
+@push.command("metadata")
+@click.pass_context
+@click.argument(
+    "input_file",
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        allow_dash=False,
+        resolve_path=True,
+        path_type=pathlib.Path,
+    ),
+)
+@click.option("--folder", default="/", help="Simvue folder to add runs to.")
+@click.option(
+    "--tenant",
+    "tenant_visible",
+    is_flag=True,
+    default=False,
+    help="Share with tenant.",
+)
+@click.option(
+    "--public",
+    "public_visible",
+    is_flag=True,
+    default=False,
+    help="Share with public.",
+)
+@click.option("--user", "user_list", multiple=True, help="Share with user.")
+@click.option(
+    "--metadata", "global_metadata", type=JSONType, help="Metadata for all runs."
+)
+def push_metadata(ctx, input_file: pathlib.Path, **kwargs) -> None:
+    """Push sets of metadata to the Simvue server as independent runs."""
+    _plain_text = ctx.obj["plain"]
+    if input_file.suffix == ".csv":
+        _out_msg: str = f"Pushing metadata list from CSV file '{input_file}'..."
+        click.echo(_out_msg)
+        simvue_cli.actions.push_delim_metadata(input_file, delimiter=",", **kwargs)
+    elif input_file.suffix == ".json":
+        _out_msg: str = f"Pushing metadata list from JSON file '{input_file}'..."
+        click.echo(_out_msg)
+        simvue_cli.actions.push_json_metadata(input_file, **kwargs)
+    else:
+        _out_msg: str = f"Unsupported file type '{input_file.suffix}'"
+        if not _plain_text:
+            _out_msg = click.style(_out_msg, fg="red", bold=True)
+        click.echo(_out_msg)
+        raise click.Abort
+
+
+@push.command("runs")
+@click.pass_context
+@click.argument(
+    "input_file",
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        allow_dash=False,
+        resolve_path=True,
+        path_type=pathlib.Path,
+    ),
+)
+@click.option("--folder", default="/", help="Simvue folder to add runs to.")
+@click.option(
+    "--tenant",
+    "tenant_visible",
+    is_flag=True,
+    default=False,
+    help="Share with tenant.",
+)
+@click.option(
+    "--public",
+    "public_visible",
+    is_flag=True,
+    default=False,
+    help="Share with public.",
+)
+@click.option("--user", "user_list", multiple=True, help="Share with user.")
+@click.option(
+    "--metadata", "global_metadata", type=JSONType, help="Metadata for all runs."
+)
+def push_runs(ctx, input_file: pathlib.Path, **kwargs) -> None:
+    """Push sets of runs to the Simvue server."""
+    _plain_text = ctx.obj["plain"]
+    if input_file.suffix == ".json":
+        _out_msg: str = f"Pushing run list from JSON file '{input_file}'..."
+        click.echo(_out_msg)
+        simvue_cli.actions.push_json_runs(input_file, **kwargs)
+    else:
+        _out_msg: str = f"Unsupported file type '{input_file.suffix}'"
+        if not _plain_text:
+            _out_msg = click.style(_out_msg, fg="red", bold=True)
+        click.echo(_out_msg)
+        raise click.Abort
 
 
 if __name__ in "__main__":
