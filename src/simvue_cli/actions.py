@@ -592,7 +592,7 @@ def get_tenant(tenant_id: str) -> Tenant:
 
 def count_tenants() -> int:
     try:
-        return Tenant.count(count=None, offset=None)
+        return Tenant.count()
     except StopIteration:
         return 0
 

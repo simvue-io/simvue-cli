@@ -3,6 +3,7 @@ import datetime
 import typing
 import pydantic
 import abc
+import json
 import pathlib
 import simvue.api.objects as sv_obj
 from simvue.api.objects.base import ObjectBatchArgs, VisibilityBatchArgs
@@ -47,7 +48,9 @@ class PushAPI(abc.ABC):
         self._folder = folder_path
 
     @pydantic.validate_call
-    def global_metadata(self, metadata: dict[str, float | str | bool]) -> None:
+    def global_metadata(self, metadata: str | dict[str, object]) -> None:
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
         self._metadata = metadata
 
     def add_run(
@@ -56,7 +59,7 @@ class PushAPI(abc.ABC):
         folder: str,
         name: str | None = None,
         description: str | None = None,
-        metadata: dict[str, str | float | bool] | None = None,
+        metadata: dict[str, object] | None = None,
         metrics: list[dict[str, float | int]] | None = None,
         status: typing.Literal[
             "completed", "failed", "lost", "terminated"

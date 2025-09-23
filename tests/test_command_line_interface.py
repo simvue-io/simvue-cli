@@ -5,7 +5,7 @@ import typing
 from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
 from simvue.api.objects import Alert, Storage, Tenant, User
-from simvue.client import ObjectNotFoundError
+from simvue.client import ObjectNotFoundError, Client
 from simvue.run import RunObject
 import tabulate
 import simvue
@@ -137,7 +137,7 @@ def test_run_creation(state: str) -> None:
             run_id
         ]
     )
-    assert result.exit_code == 0, result.stdout
+    assert result.exit_code == 0, (result.stdout, result.stderr)
     with pytest.raises(ObjectNotFoundError):
         RunObject(identifier=run_id)
 
@@ -615,7 +615,8 @@ def test_user_and_tenant() -> None:
             "tenant",
             "remove",
             _tenant_id
-        ]
+        ],
+        catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
     with pytest.raises(ObjectNotFoundError):
@@ -680,7 +681,7 @@ def test_whoami() -> None:
             "whoami"
         ]
     )
-    assert result.exit_code == 0, result.stdout
+    assert result.exit_code == 0, (result.stdout, result.stderr)
 
 
 def test_purge(monkeypatch) -> None:
@@ -701,7 +702,7 @@ def test_purge(monkeypatch) -> None:
                 "purge"
             ]
         )
-        assert result.exit_code == 0, result.stdout
+        assert result.exit_code == 0, (result.stdout, result.stderr)
         assert f"{_test_dir.joinpath('.simvue')}" in result.stdout
         assert f"{_test_dir.joinpath('.simvue.toml')}" in result.stdout
         assert not _test_dir.joinpath(".simvue").exists()
@@ -717,19 +718,21 @@ def test_push_metadata_as_runs(file_type: str) -> None:
         sv_cli.simvue,
         [
             "push",
-            "metadata",
+            "runs",
             "--tenant",
             "--metadata",
             "{\"batch_number\": 0}",
+            "--from-metadata",
             f'{pathlib.Path(__file__).parent.joinpath("data", f"metadata_100.{file_type}")}'
         ],
         catch_exceptions=False
     )
-    assert result.exit_code == 0, result.stdout
+    assert result.exit_code == 0, (result.stdout, result.stderr)
 
 
 def test_push_runs() -> None:
     runner = click.testing.CliRunner()
+    _uuid = f"{uuid4()}".split("-")[0]
     result = runner.invoke(
         sv_cli.simvue,
         [
@@ -738,8 +741,12 @@ def test_push_runs() -> None:
             "--tenant",
             "--metadata",
             "{\"batch_number\": 0}",
+            f"--folder=/simvue_cli_tests/{_uuid}",
             f'{pathlib.Path(__file__).parent.joinpath("data", "runs_100.json")}'
         ],
         catch_exceptions=False
     )
-    assert result.exit_code == 0, result.stdout
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+
+    if _folder := Client().get_folder(f"/simvue_cli_tests/{_uuid}"):
+        _folder.delete(recursive=True, delete_runs=True)
