@@ -1,3 +1,5 @@
+import contextlib
+import random
 import simvue.run as sv_run
 import os
 import uuid
@@ -5,7 +7,7 @@ import pathlib
 import tempfile
 import pytest
 import time
-import simvue.metadata
+import faker
 import json
 import typing
 
@@ -99,3 +101,77 @@ def setup_test_run(run: sv_run.Run, create_objects: bool, request: pytest.Fixtur
 
     time.sleep(1.)
     return TEST_DATA
+
+
+@pytest.fixture
+def create_metadata_csv() -> pathlib.Path:
+    N_RUNS: int = 40000
+    _headers = ("first_name", "last_name", "email", "date")
+    _fake = faker.Faker()
+    with tempfile.NamedTemporaryFile(delete_on_close=False, suffix=".csv") as temp_f:
+        _file_path = pathlib.Path(temp_f.name)
+        with _file_path.open("w") as out_f:
+            out_f.write(",".join(_headers) + "\n")
+            for run in range(N_RUNS):
+                _row = [
+                    getattr(_fake, header)()
+                    for header in _headers
+                ]
+                out_f.write(",".join(_row) + "\n")
+        yield _file_path
+    with contextlib.suppress(FileNotFoundError):
+        _file_path.unlink()
+
+
+@pytest.fixture
+def create_metadata_json(monkeypatch) -> pathlib.Path:
+    import simvue_cli.push.core
+    monkeypatch.setattr(simvue_cli.push.core, "BATCH_RUN_LIMIT", 10)
+    N_RUNS: int = 1000
+    _headers = ("first_name", "last_name", "email", "date")
+    _fake = faker.Faker()
+    with tempfile.NamedTemporaryFile(delete_on_close=False, suffix=".json") as temp_f:
+        _file_path = pathlib.Path(temp_f.name)
+        _out_data = []
+        with _file_path.open("w") as out_f:
+            for run in range(N_RUNS):
+                _row = {
+                        header: getattr(_fake, header)()
+                    for header in _headers
+                }
+                _out_data.append(_row)
+            json.dump(_out_data, out_f, indent=2)
+        yield _file_path
+    with contextlib.suppress(FileNotFoundError):
+        _file_path.unlink()
+
+
+@pytest.fixture
+def create_runs_json(monkeypatch) -> pathlib.Path:
+    import simvue_cli.push.core
+    monkeypatch.setattr(simvue_cli.push.core, "BATCH_RUN_LIMIT", 10)
+    N_RUNS: int = 1000
+    N_METRICS: int = 10
+    _headers = ("first_name", "last_name", "email", "date")
+    _fake = faker.Faker()
+    with tempfile.NamedTemporaryFile(delete_on_close=False, suffix=".json") as temp_f:
+        _file_path = pathlib.Path(temp_f.name)
+        _out_data = []
+        with _file_path.open("w") as out_f:
+            for run in range(N_RUNS):
+                _metrics: list[dict[str, float]] = [
+                    {"x": random.random(), "y": 10 * random.random()}
+                    for _ in range(N_METRICS)
+                ]
+                _run = {
+                    "name": _fake.name(),
+                    "description": _fake.text(),
+                    "metadata": {_fake.name(): _fake.name()},
+                    "tags": ["test_simvue_cli"]
+                }
+                _out_data.append(_run)
+            json.dump(_out_data, out_f, indent=2)
+        yield _file_path
+    with contextlib.suppress(FileNotFoundError):
+        _file_path.unlink()
+

@@ -214,46 +214,50 @@ def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status:
     assert _alert.get_status(run.id) == status
 
 
-@pytest.mark.parametrize(
-    "file_type", ("csv", "json")
-)
-def test_metadata_push(file_type: str) -> None:
-    _input_file=pathlib.Path(__file__).parents[1].joinpath("data", f"metadata_100.{file_type}")
+def test_metadata_push_csv(create_metadata_csv: pathlib.Path) -> None:
     _uuid = f"{uuid.uuid4()}".split("-")[0]
     _folder_name: str = f"/simvue_cli_testing/{_uuid}"
-    if file_type == "csv":
-        _folder_id = simvue_cli.actions.push_delim_metadata(
-            input_file=_input_file,
-            folder=_folder_name,
-            global_metadata="{\"batch_number\": 0}",
-            public_visible=False,
-            tenant_visible=True,
-            user_list=set(),
-            delimiter=","
-        )
-    else:
-        _folder_id = simvue_cli.actions.push_json_metadata(
-            input_file=_input_file,
-            folder=_folder_name,
-            global_metadata="{\"batch_number\": 0}",
-            public_visible=False,
-            tenant_visible=True,
-            user_list=set()
-        )
+    _folder_id = simvue_cli.actions.push_delim_metadata(
+        input_file=create_metadata_csv,
+        folder=_folder_name,
+        global_metadata="{\"batch_number\": 0}",
+        public_visible=False,
+        tenant_visible=True,
+        user_list=set(),
+        delimiter=","
+    )
+    assert _folder_id
     with contextlib.suppress(Exception):
         Folder(identifier=_folder_id).delete(delete_runs=True, recursive=True)
 
 
-def test_runs_push() -> None:
+def test_metadata_push_json(create_metadata_json: pathlib.Path) -> None:
+    _uuid = f"{uuid.uuid4()}".split("-")[0]
+    _folder_name: str = f"/simvue_cli_testing/{_uuid}"
+    _folder_id = simvue_cli.actions.push_json_metadata(
+        input_file=create_metadata_json,
+        folder=_folder_name,
+        global_metadata="{\"batch_number\": 0}",
+        public_visible=False,
+        tenant_visible=True,
+        user_list=set(),
+    )
+    assert _folder_id
+    with contextlib.suppress(Exception):
+        Folder(identifier=_folder_id).delete(delete_runs=True, recursive=True)
+
+
+def test_runs_push(create_runs_json: pathlib.Path) -> None:
     _uuid = f"{uuid.uuid4()}".split("-")[0]
     _folder_ids = simvue_cli.actions.push_json_runs(
-        input_file=pathlib.Path(__file__).parents[1].joinpath("data", "runs_100.json"),
+        input_file=create_runs_json,
         folder=f"/simvue_cli_testing/{_uuid}",
         tenant_visible=True,
         public_visible=False,
         user_list=set(),
         global_metadata="{\"batch_number\": 0}",
     )
+    assert _folder_ids
     for folder in _folder_ids:
         with contextlib.suppress(Exception):
             Folder(identifier=folder).delete(delete_runs=True, recursive=True)

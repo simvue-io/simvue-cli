@@ -42,7 +42,8 @@ dependencies = [
     "regex>=2024.11.6",
     "requests>=2.32.3",
     "tqdm>=4.67.1",
-    "simvue",
+    "more-itertools>=10.8.0",
+    "simvue>=2.2.0",
 ]
 
 [project.urls]
@@ -74,7 +75,9 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "faker>=37.8.0",
     "pytest-cov>=6.0.0",
+    "pytest-xdist>=3.8.0",
     "pytest>=8.3.5",
 ]
 docs = [
@@ -87,6 +90,3 @@ lint = [
 
 [tool.mypy]
 ignore_missing_imports = true
-
-[tool.uv.sources]
-simvue = { git = "https://github.com/simvue-io/python-api", branch = "dev" }

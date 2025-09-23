@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import more_itertools
 import typing
 import pydantic
 import abc
@@ -11,6 +12,7 @@ from simvue.api.objects.run import RunBatchArgs
 from simvue.models import FOLDER_REGEX, DATETIME_FORMAT, MetricSet
 
 PUSHABLE_OBJECTS: set[str] = {"run"}
+BATCH_RUN_LIMIT: int = 20_000
 
 
 @dataclasses.dataclass
@@ -91,17 +93,21 @@ class PushAPI(abc.ABC):
             ]
 
     def push(self) -> None:
-        if _run_data := self._data.get("run"):
-            for i, _id in enumerate(
-                sv_obj.Run.batch_create(
-                    entries=_run_data,
+        if not (_run_data := self._data.get("run")):
+            return
+
+        def _queue_generator(data=_run_data):
+            for item in more_itertools.chunked(data, BATCH_RUN_LIMIT):
+                yield from sv_obj.Run.batch_create(
+                    entries=item,
                     visibility=self._visibility,
                     folder=self._folder,
                     metadata=self._metadata,
                 )
-            ):
-                if _metrics := self._run_metrics.get(i):
-                    sv_obj.Metrics.new(run=_id, metrics=_metrics).commit()
+
+        for i, _id in enumerate(_queue_generator()):
+            if _metrics := self._run_metrics.get(i):
+                sv_obj.Metrics.new(run=_id, metrics=_metrics).commit()
 
     @abc.abstractmethod
     def load(self, input_file: pathlib.Path, *, folder: str, **_) -> None:

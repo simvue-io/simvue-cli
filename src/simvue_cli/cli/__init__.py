@@ -2112,9 +2112,7 @@ def push_runs(
 
     if from_metadata:
         if input_file.suffix == ".csv":
-            _out_msg: str = f"Pushing metadata list from CSV file '{input_file}'..."
-            click.echo(_out_msg)
-            simvue_cli.actions.push_delim_metadata(
+            _folder_id = simvue_cli.actions.push_delim_metadata(
                 input_file,
                 delimiter=",",
                 **kwargs,
@@ -2123,9 +2121,7 @@ def push_runs(
                 user_list=user_list,
             )
         elif input_file.suffix == ".json":
-            _out_msg: str = f"Pushing metadata list from JSON file '{input_file}'..."
-            click.echo(_out_msg)
-            simvue_cli.actions.push_json_metadata(
+            _folder_id = simvue_cli.actions.push_json_metadata(
                 input_file,
                 public_visible=public_visible,
                 tenant_visible=tenant_visible,
@@ -2138,11 +2134,10 @@ def push_runs(
                 _out_msg = click.style(_out_msg, fg="red", bold=True)
             click.echo(_out_msg)
             raise click.Abort
+        click.echo(_folder_id)
         return
     if input_file.suffix == ".json":
-        _out_msg: str = f"Pushing run list from JSON file '{input_file}'..."
-        click.echo(_out_msg)
-        simvue_cli.actions.push_json_runs(
+        _folder_ids = simvue_cli.actions.push_json_runs(
             input_file,
             public_visible=public_visible,
             tenant_visible=tenant_visible,
@@ -2155,6 +2150,7 @@ def push_runs(
             _out_msg = click.style(_out_msg, fg="red", bold=True)
         click.echo(_out_msg)
         raise click.Abort
+    click.echo("\n".join(_folder_ids))
 
 
 if __name__ in "__main__":

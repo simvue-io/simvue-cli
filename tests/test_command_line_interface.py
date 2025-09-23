@@ -1,10 +1,12 @@
+import contextlib
 from logging import critical
 import random
 import string
 import typing
 from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
-from simvue.api.objects import Alert, Storage, Tenant, User
+from numpy import rec
+from simvue.api.objects import Alert, Folder, Storage, Tenant, User
 from simvue.client import ObjectNotFoundError, Client
 from simvue.run import RunObject
 import tabulate
@@ -709,28 +711,59 @@ def test_purge(monkeypatch) -> None:
         assert not _test_dir.joinpath(".simvue.toml").exists()
 
 
-@pytest.mark.parametrize(
-    "file_type", ("csv", "json")
-)
-def test_push_metadata_as_runs(file_type: str) -> None:
+def test_push_metadata_as_runs_csv(create_metadata_csv: str) -> None:
+    _uuid = f"{uuid4()}".split("-")[0]
     runner = click.testing.CliRunner()
     result = runner.invoke(
         sv_cli.simvue,
         [
             "push",
             "runs",
+            f"--folder=/simvue_cli_tests/{_uuid}",
             "--tenant",
             "--metadata",
             "{\"batch_number\": 0}",
             "--from-metadata",
-            f'{pathlib.Path(__file__).parent.joinpath("data", f"metadata_100.{file_type}")}'
+            f"{create_metadata_csv}"
         ],
         catch_exceptions=False
     )
     assert result.exit_code == 0, (result.stdout, result.stderr)
+    _folder_id = result.stdout.strip()
+    assert _folder_id
+    _folder = Folder(identifier=_folder_id)
+    assert _folder.to_dict()["runs"] == 1000, f"Expected 1000 runs in {_folder_id} but got {_folder.to_dict()['runs']}"
+    with contextlib.suppress(ObjectNotFoundError):
+        _folder.delete(recursive=True, delete_runs=True)
 
 
-def test_push_runs() -> None:
+def test_push_metadata_as_runs_json(create_metadata_json: str) -> None:
+    runner = click.testing.CliRunner()
+    _uuid = f"{uuid4()}".split("-")[0]
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "push",
+            "runs",
+            "--tenant",
+            f"--folder=/simvue_cli_tests/{_uuid}",
+            "--metadata",
+            "{\"batch_number\": 0}",
+            "--from-metadata",
+            f"{create_metadata_json}"
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+    _folder_id = result.stdout.strip()
+    assert _folder_id
+    _folder = Folder(identifier=_folder_id)
+    assert _folder.to_dict()["runs"] == 1000, f"Expected 1000 runs in {_folder_id} but got {_folder.to_dict()['runs']}"
+    with contextlib.suppress(ObjectNotFoundError):
+        _folder.delete(recursive=True, delete_runs=True)
+
+
+def test_push_runs(create_runs_json: pathlib.Path) -> None:
     runner = click.testing.CliRunner()
     _uuid = f"{uuid4()}".split("-")[0]
     result = runner.invoke(
@@ -742,11 +775,15 @@ def test_push_runs() -> None:
             "--metadata",
             "{\"batch_number\": 0}",
             f"--folder=/simvue_cli_tests/{_uuid}",
-            f'{pathlib.Path(__file__).parent.joinpath("data", "runs_100.json")}'
+            f'{create_runs_json}'
         ],
         catch_exceptions=False
     )
     assert result.exit_code == 0, (result.stdout, result.stderr)
+    _folder_ids = result.stdout.strip().split("\n")
+    assert _folder_ids
+    _folder = Folder(identifier=_folder_ids[0])
+    assert _folder.to_dict()["runs"] == 1000, f"Expected 1000 runs in {_folder_ids[0]} but got {_folder.to_dict()['runs']}"
 
     if _folder := Client().get_folder(f"/simvue_cli_tests/{_uuid}"):
         _folder.delete(recursive=True, delete_runs=True)
