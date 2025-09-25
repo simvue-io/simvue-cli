@@ -105,6 +105,9 @@ class PushAPI(abc.ABC):
                     metadata=self._metadata,
                 )
 
+        if not self._run_metrics:
+            return
+
         for i, _id in enumerate(_queue_generator()):
             if _metrics := self._run_metrics.get(i):
                 sv_obj.Metrics.new(run=_id, metrics=_metrics).commit()

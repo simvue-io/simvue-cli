@@ -2081,7 +2081,7 @@ def push(ctx) -> None:
     "--metadata",
     "global_metadata",
     type=JSONType,
-    help="Metadata to append to all runs.",
+    help="Metadata to append to all runs in the form of a JSON string.",
 )
 @click.option(
     "--from-metadata",
