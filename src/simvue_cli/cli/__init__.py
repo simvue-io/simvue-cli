@@ -2058,6 +2058,7 @@ def push(ctx) -> None:
         path_type=pathlib.Path,
     ),
 )
+@click.option("--name", default=None, help="Name to set to all runs.")
 @click.option("--folder", default="/", help="Simvue folder to add runs to.")
 @click.option(
     "--tenant",

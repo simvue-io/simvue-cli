@@ -51,8 +51,8 @@ from simvue.api.objects.administrator import User, Tenant
 
 from simvue_cli.push.json import PushJSON
 
-from .config import get_url_and_headers
-from .push import PushDelimited
+from simvue_cli.config import get_url_and_headers
+from simvue_cli.push import PushDelimited
 
 # Local directory to hold run information
 CACHE_DIRECTORY = pathlib.Path().home().joinpath(".simvue", "cli_runs")
@@ -789,6 +789,7 @@ def push_delim_metadata(
     input_file: pathlib.Path,
     *,
     folder: str,
+    name: str | None,
     tenant_visible: bool,
     public_visible: bool,
     user_list: set[str],
@@ -802,7 +803,7 @@ def push_delim_metadata(
     if global_metadata:
         _push_class.global_metadata(global_metadata)
     return _push_class.load_from_metadata(
-        input_file, folder=folder, delimiter=delimiter
+        input_file, folder=folder, delimiter=delimiter, name=name
     )
 
 
@@ -810,6 +811,7 @@ def push_json_metadata(
     input_file: pathlib.Path,
     *,
     folder: str,
+    name: str | None,
     tenant_visible: bool,
     public_visible: bool,
     user_list: set[str],
@@ -821,7 +823,7 @@ def push_json_metadata(
     _push_class.visible_to_users(user_list)
     if global_metadata:
         _push_class.global_metadata(global_metadata)
-    return _push_class.load_from_metadata(input_file, folder=folder)
+    return _push_class.load_from_metadata(input_file, name=name, folder=folder)
 
 
 def push_json_runs(

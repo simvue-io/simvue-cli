@@ -8,7 +8,7 @@ from simvue.api.objects import Folder
 class PushJSON(PushAPI):
     @pydantic.validate_call
     def load_from_metadata(
-        self, input_file: pydantic.FilePath, *, folder: str
+        self, input_file: pydantic.FilePath, *, name: str | None = None, folder: str
     ) -> str | None:
         with input_file.open() as in_f:
             _data = json.load(in_f)
@@ -20,7 +20,7 @@ class PushJSON(PushAPI):
             raise ValueError("Expected JSON content to be a list.")
 
         for json_block in _data:
-            self.add_run(metadata=json_block, folder=folder)
+            self.add_run(name=name, metadata=json_block, folder=folder)
 
         self.push()
         return _folder.id
