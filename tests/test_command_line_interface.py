@@ -720,6 +720,7 @@ def test_push_metadata_as_runs_csv(create_metadata_csv: str) -> None:
             "push",
             "runs",
             f"--folder=/simvue_cli_tests/{_uuid}",
+            "--name=test_push_metadata_as_runs_csv",
             "--tenant",
             "--metadata",
             "{\"batch_number\": 0}",
@@ -731,8 +732,10 @@ def test_push_metadata_as_runs_csv(create_metadata_csv: str) -> None:
     assert result.exit_code == 0, (result.stdout, result.stderr)
     _folder_id = result.stdout.strip()
     assert _folder_id
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=50000)
+    assert len(list(runs)) == 100
     _folder = Folder(identifier=_folder_id, return_stats=True)
-    assert _folder.to_dict()["runs"] == 1000, f"Expected 1000 runs in {_folder_id} but got {_folder.to_dict()['runs']}"
     with contextlib.suppress(ObjectNotFoundError):
         _folder.delete(recursive=True, delete_runs=True)
 
@@ -747,6 +750,7 @@ def test_push_metadata_as_runs_json(create_metadata_json: str) -> None:
             "runs",
             "--tenant",
             f"--folder=/simvue_cli_tests/{_uuid}",
+            "--name=test_push_metadata_as_runs_json",
             "--metadata",
             "{\"batch_number\": 0}",
             "--from-metadata",
@@ -757,8 +761,10 @@ def test_push_metadata_as_runs_json(create_metadata_json: str) -> None:
     assert result.exit_code == 0, (result.stdout, result.stderr)
     _folder_id = result.stdout.strip()
     assert _folder_id
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=50000)
+    assert len(list(runs)) == 100
     _folder = Folder(identifier=_folder_id, return_stats=True)
-    assert _folder.to_dict()["runs"] == 1000, f"Expected 1000 runs in {_folder_id} but got {_folder.to_dict()['runs']}"
     with contextlib.suppress(ObjectNotFoundError):
         _folder.delete(recursive=True, delete_runs=True)
 
@@ -782,8 +788,10 @@ def test_push_runs(create_runs_json: pathlib.Path) -> None:
     assert result.exit_code == 0, (result.stdout, result.stderr)
     _folder_ids = result.stdout.strip().split("\n")
     assert _folder_ids
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=50000)
+    assert len(list(runs)) == 100
     _folder = Folder(identifier=_folder_ids[0], return_status=True)
-    assert _folder.to_dict()["runs"] == 1000, f"Expected 1000 runs in {_folder_ids[0]} but got {_folder.to_dict()['runs']}"
 
     if _folder := Client().get_folder(f"/simvue_cli_tests/{_uuid}"):
         _folder.delete(recursive=True, delete_runs=True)

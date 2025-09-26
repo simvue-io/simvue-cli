@@ -220,6 +220,7 @@ def test_metadata_push_csv(create_metadata_csv: pathlib.Path) -> None:
     _folder_id = simvue_cli.actions.push_delim_metadata(
         input_file=create_metadata_csv,
         folder=_folder_name,
+        name="test_metadata_push_csv",
         global_metadata="{\"batch_number\": 0}",
         public_visible=False,
         tenant_visible=True,
@@ -237,6 +238,7 @@ def test_metadata_push_json(create_metadata_json: pathlib.Path) -> None:
     _folder_id = simvue_cli.actions.push_json_metadata(
         input_file=create_metadata_json,
         folder=_folder_name,
+        name="test_metadata_push_json",
         global_metadata="{\"batch_number\": 0}",
         public_visible=False,
         tenant_visible=True,
