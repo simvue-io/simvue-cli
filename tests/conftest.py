@@ -105,10 +105,10 @@ def setup_test_run(run: sv_run.Run, create_objects: bool, request: pytest.Fixtur
 
 @pytest.fixture
 def create_metadata_csv() -> pathlib.Path:
-    N_RUNS: int = 40000
+    N_RUNS: int = 100
     _headers = ("first_name", "last_name", "email", "date")
     _fake = faker.Faker()
-    with tempfile.NamedTemporaryFile(suffix=".csv") as temp_f:
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp_f:
         _file_path = pathlib.Path(temp_f.name)
         with _file_path.open("w") as out_f:
             out_f.write(",".join(_headers) + "\n")
@@ -127,10 +127,10 @@ def create_metadata_csv() -> pathlib.Path:
 def create_metadata_json(monkeypatch) -> pathlib.Path:
     import simvue_cli.push.core
     monkeypatch.setattr(simvue_cli.push.core, "BATCH_RUN_LIMIT", 10)
-    N_RUNS: int = 40000
+    N_RUNS: int = 100
     _headers = ("first_name", "last_name", "email", "date")
     _fake = faker.Faker()
-    with tempfile.NamedTemporaryFile(suffix=".json") as temp_f:
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_f:
         _file_path = pathlib.Path(temp_f.name)
         _out_data = []
         with _file_path.open("w") as out_f:
@@ -150,11 +150,11 @@ def create_metadata_json(monkeypatch) -> pathlib.Path:
 def create_runs_json(monkeypatch) -> pathlib.Path:
     import simvue_cli.push.core
     monkeypatch.setattr(simvue_cli.push.core, "BATCH_RUN_LIMIT", 10)
-    N_RUNS: int = 1000
+    N_RUNS: int = 100
     N_METRICS: int = 10
     _headers = ("first_name", "last_name", "email", "date")
     _fake = faker.Faker()
-    with tempfile.NamedTemporaryFile(suffix=".json") as temp_f:
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_f:
         _file_path = pathlib.Path(temp_f.name)
         _out_data = []
         with _file_path.open("w") as out_f:

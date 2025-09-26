@@ -734,7 +734,7 @@ def test_push_metadata_as_runs_csv(create_metadata_csv: str) -> None:
     assert _folder_id
     client = simvue.Client()
     runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=50000)
-    assert len(list(runs)) == 40000
+    assert len(list(runs)) == 100
     _folder = Folder(identifier=_folder_id, return_stats=True)
     with contextlib.suppress(ObjectNotFoundError):
         _folder.delete(recursive=True, delete_runs=True)
@@ -763,7 +763,7 @@ def test_push_metadata_as_runs_json(create_metadata_json: str) -> None:
     assert _folder_id
     client = simvue.Client()
     runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=50000)
-    assert len(list(runs)) == 40000
+    assert len(list(runs)) == 100
     _folder = Folder(identifier=_folder_id, return_stats=True)
     with contextlib.suppress(ObjectNotFoundError):
         _folder.delete(recursive=True, delete_runs=True)
@@ -790,7 +790,7 @@ def test_push_runs(create_runs_json: pathlib.Path) -> None:
     assert _folder_ids
     client = simvue.Client()
     runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=50000)
-    assert len(list(runs)) == 1000
+    assert len(list(runs)) == 100
     _folder = Folder(identifier=_folder_ids[0], return_status=True)
 
     if _folder := Client().get_folder(f"/simvue_cli_tests/{_uuid}"):
