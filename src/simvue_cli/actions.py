@@ -830,6 +830,7 @@ def push_json_runs(
     input_file: pathlib.Path,
     *,
     folder: str,
+    name: str | None,
     tenant_visible: bool,
     public_visible: bool,
     user_list: set[str],
@@ -841,4 +842,4 @@ def push_json_runs(
     _push_class.visible_to_users(user_list)
     if global_metadata:
         _push_class.global_metadata(global_metadata)
-    return _push_class.load(input_file, folder=folder)
+    return _push_class.load(input_file, name=name, folder=folder)
