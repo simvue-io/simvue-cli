@@ -228,6 +228,9 @@ def test_metadata_push_csv(create_metadata_csv: pathlib.Path) -> None:
         delimiter=","
     )
     assert _folder_id
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_testing/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
     with contextlib.suppress(Exception):
         Folder(identifier=_folder_id).delete(delete_runs=True, recursive=True)
 
@@ -245,6 +248,9 @@ def test_metadata_push_json(create_metadata_json: pathlib.Path) -> None:
         user_list=set(),
     )
     assert _folder_id
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_testing/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
     with contextlib.suppress(Exception):
         Folder(identifier=_folder_id).delete(delete_runs=True, recursive=True)
 
@@ -260,6 +266,9 @@ def test_runs_push(create_runs_json: pathlib.Path) -> None:
         global_metadata="{\"batch_number\": 0}",
     )
     assert _folder_ids
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_testing/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
     for folder in _folder_ids:
         with contextlib.suppress(Exception):
             Folder(identifier=folder).delete(delete_runs=True, recursive=True)
