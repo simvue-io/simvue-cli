@@ -262,7 +262,6 @@ def test_user_alert_trigger(create_plain_run: tuple[simvue.Run, dict], status: t
     _alert_id = run.create_user_alert(
         name="test_user_alert_triggered_alert_cli",
         description="Test alert for CLI triggering",
-        trigger_abort=True
     )
     _command = [
         "alert",

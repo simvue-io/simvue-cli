@@ -52,7 +52,7 @@ def test_user_alerts() -> None:
     _alert_name: str = f"{uuid.uuid4()}".split("-")[0]
     _alert = simvue_cli.actions.create_user_alert(
         name=f"cli_alert_{_alert_name}",
-        trigger_abort=True,
+        trigger_abort = False,
         email_notify=False,
         description=None
     )
@@ -203,7 +203,6 @@ def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status:
     _alert_id = run.create_user_alert(
         name="test_user_alert_triggered_alert",
         description="Test alert for CLI triggering",
-        trigger_abort=True
     )
     simvue_cli.actions.trigger_user_alert(
         run.id,
