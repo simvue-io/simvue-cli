@@ -260,6 +260,7 @@ def test_runs_push(create_runs_json: pathlib.Path) -> None:
     _folder_ids = simvue_cli.actions.push_json_runs(
         input_file=create_runs_json,
         folder=f"/simvue_cli_testing/{_uuid}",
+        name=None,
         tenant_visible=True,
         public_visible=False,
         user_list=set(),

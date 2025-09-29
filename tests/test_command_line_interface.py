@@ -735,7 +735,7 @@ def test_push_metadata_as_runs_csv(create_metadata_csv: str) -> None:
     client = simvue.Client()
     runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=200)
     assert len(list(runs)) == 100
-    _folder = Folder(identifier=_folder_id, return_stats=True)
+    _folder = Folder(identifier=_folder_id)
     with contextlib.suppress(ObjectNotFoundError):
         _folder.delete(recursive=True, delete_runs=True)
 

@@ -19,8 +19,8 @@ class PushJSON(PushAPI):
         if not isinstance(_data, list):
             raise ValueError("Expected JSON content to be a list.")
 
-        for json_block in _data:
-            self.add_run(name=name, metadata=json_block, folder=folder)
+        for i, json_block in enumerate(_data):
+            self.add_run(name=f"{name}-{i}" if name else None, metadata=json_block, folder=folder)
 
         self.push()
         return _folder.id
@@ -38,7 +38,7 @@ class PushJSON(PushAPI):
         if not isinstance(_data, list):
             raise ValueError("Expected JSON content to be a list.")
 
-        for json_block in _data:
+        for i, json_block in enumerate(_data):
             if _folder_path := json_block.get("folder"):
                 _folder = Folder.new(path=_folder_path)
                 _folder.commit()
@@ -46,7 +46,7 @@ class PushJSON(PushAPI):
                 _folder_ids.append(_folder.id)
             self.add_run(
                 folder=folder or json_block.get("folder"),
-                name=name or json_block.get("name"),
+                name=f"{name}-{i}" if name else None or json_block.get("name"),
                 description=json_block.get("description"),
                 metadata=json_block.get("metadata"),
                 metrics=json_block.get("metrics"),
