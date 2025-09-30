@@ -49,7 +49,10 @@ from simvue.api.objects import (
 )
 from simvue.api.objects.administrator import User, Tenant
 
-from .config import get_url_and_headers
+from simvue_cli.push.json import PushJSON
+
+from simvue_cli.config import get_url_and_headers
+from simvue_cli.push import PushDelimited
 
 # Local directory to hold run information
 CACHE_DIRECTORY = pathlib.Path().home().joinpath(".simvue", "cli_runs")
@@ -589,7 +592,7 @@ def get_tenant(tenant_id: str) -> Tenant:
 
 def count_tenants() -> int:
     try:
-        return Tenant.count(count=None, offset=None)
+        return Tenant.count()
     except StopIteration:
         return 0
 
@@ -780,3 +783,63 @@ def pull_run(
             raise RuntimeError(f"Download of file '{_out_file}' failed.")
         _output.append(output_dir.joinpath(artifact.name))
     return _output
+
+
+def push_delim_metadata(
+    input_file: pathlib.Path,
+    *,
+    folder: str,
+    name: str | None,
+    tenant_visible: bool,
+    public_visible: bool,
+    user_list: set[str],
+    global_metadata: str | None,
+    delimiter: str,
+) -> str | None:
+    _push_class = PushDelimited()
+    _push_class.tenant_visible(tenant_visible)
+    _push_class.public_visible(public_visible)
+    _push_class.visible_to_users(user_list)
+    if global_metadata:
+        _push_class.global_metadata(global_metadata)
+    return _push_class.load_from_metadata(
+        input_file, folder=folder, delimiter=delimiter, name=name
+    )
+
+
+def push_json_metadata(
+    input_file: pathlib.Path,
+    *,
+    folder: str,
+    name: str | None,
+    tenant_visible: bool,
+    public_visible: bool,
+    user_list: set[str],
+    global_metadata: str | None,
+) -> str | None:
+    _push_class = PushJSON()
+    _push_class.tenant_visible(tenant_visible)
+    _push_class.public_visible(public_visible)
+    _push_class.visible_to_users(user_list)
+    if global_metadata:
+        _push_class.global_metadata(global_metadata)
+    return _push_class.load_from_metadata(input_file, name=name, folder=folder)
+
+
+def push_json_runs(
+    input_file: pathlib.Path,
+    *,
+    folder: str,
+    name: str | None,
+    tenant_visible: bool,
+    public_visible: bool,
+    user_list: set[str],
+    global_metadata: str | None,
+) -> list[str | None]:
+    _push_class = PushJSON()
+    _push_class.tenant_visible(tenant_visible)
+    _push_class.public_visible(public_visible)
+    _push_class.visible_to_users(user_list)
+    if global_metadata:
+        _push_class.global_metadata(global_metadata)
+    return _push_class.load(input_file, name=name, folder=folder)

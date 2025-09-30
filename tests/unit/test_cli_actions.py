@@ -1,3 +1,4 @@
+import contextlib
 import tempfile
 import time
 import re
@@ -7,7 +8,7 @@ import pytest
 import uuid
 import os
 import simvue
-from simvue.api.objects import Alert, Run, Events, Storage, Tenant, User
+from simvue.api.objects import Alert, Folder, Run, Events, Storage, Tenant, User
 from simvue.exception import ObjectNotFoundError
 from simvue.run import UserAlert
 import simvue_cli.actions
@@ -51,7 +52,7 @@ def test_user_alerts() -> None:
     _alert_name: str = f"{uuid.uuid4()}".split("-")[0]
     _alert = simvue_cli.actions.create_user_alert(
         name=f"cli_alert_{_alert_name}",
-        trigger_abort=True,
+        trigger_abort = False,
         email_notify=False,
         description=None
     )
@@ -178,8 +179,7 @@ def test_run_abort(create_test_run, monkeypatch) -> None:
         _run.id, "terminated", "test CLI abort"
     )
     time.sleep(1)
-    assert _run._sv_obj.status == "terminated"
-    assert _run._status == "terminated"
+    assert _run.status == "terminated"
 
 
 def test_run_artifact_download(create_test_run) -> None:
@@ -202,7 +202,6 @@ def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status:
     _alert_id = run.create_user_alert(
         name="test_user_alert_triggered_alert",
         description="Test alert for CLI triggering",
-        trigger_abort=True
     )
     simvue_cli.actions.trigger_user_alert(
         run.id,
@@ -212,3 +211,63 @@ def test_user_alert_triggered(create_plain_run: tuple[simvue.Run, dict], status:
     _alert: UserAlert = Alert(_alert_id)
     assert _alert.get_status(run.id) == status
 
+
+def test_metadata_push_csv(create_metadata_csv: pathlib.Path) -> None:
+    _uuid = f"{uuid.uuid4()}".split("-")[0]
+    _folder_name: str = f"/simvue_cli_testing/{_uuid}"
+    _folder_id = simvue_cli.actions.push_delim_metadata(
+        input_file=create_metadata_csv,
+        folder=_folder_name,
+        name="test_metadata_push_csv",
+        global_metadata="{\"batch_number\": 0}",
+        public_visible=False,
+        tenant_visible=True,
+        user_list=set(),
+        delimiter=","
+    )
+    assert _folder_id
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_testing/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
+    with contextlib.suppress(Exception):
+        Folder(identifier=_folder_id).delete(delete_runs=True, recursive=True)
+
+
+def test_metadata_push_json(create_metadata_json: pathlib.Path) -> None:
+    _uuid = f"{uuid.uuid4()}".split("-")[0]
+    _folder_name: str = f"/simvue_cli_testing/{_uuid}"
+    _folder_id = simvue_cli.actions.push_json_metadata(
+        input_file=create_metadata_json,
+        folder=_folder_name,
+        name="test_metadata_push_json",
+        global_metadata="{\"batch_number\": 0}",
+        public_visible=False,
+        tenant_visible=True,
+        user_list=set(),
+    )
+    assert _folder_id
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_testing/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
+    with contextlib.suppress(Exception):
+        Folder(identifier=_folder_id).delete(delete_runs=True, recursive=True)
+
+
+def test_runs_push(create_runs_json: pathlib.Path) -> None:
+    _uuid = f"{uuid.uuid4()}".split("-")[0]
+    _folder_ids = simvue_cli.actions.push_json_runs(
+        input_file=create_runs_json,
+        folder=f"/simvue_cli_testing/{_uuid}",
+        name=None,
+        tenant_visible=True,
+        public_visible=False,
+        user_list=set(),
+        global_metadata="{\"batch_number\": 0}",
+    )
+    assert _folder_ids
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_testing/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
+    for folder in _folder_ids:
+        with contextlib.suppress(Exception):
+            Folder(identifier=folder).delete(delete_runs=True, recursive=True)

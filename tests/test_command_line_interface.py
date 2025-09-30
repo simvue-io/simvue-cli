@@ -1,11 +1,13 @@
+import contextlib
 from logging import critical
 import random
 import string
 import typing
 from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
-from simvue.api.objects import Alert, Storage, Tenant, User
-from simvue.client import ObjectNotFoundError
+from numpy import rec
+from simvue.api.objects import Alert, Folder, Storage, Tenant, User
+from simvue.client import ObjectNotFoundError, Client
 from simvue.run import RunObject
 import tabulate
 import simvue
@@ -137,7 +139,7 @@ def test_run_creation(state: str) -> None:
             run_id
         ]
     )
-    assert result.exit_code == 0, result.stdout
+    assert result.exit_code == 0, (result.stdout, result.stderr)
     with pytest.raises(ObjectNotFoundError):
         RunObject(identifier=run_id)
 
@@ -260,7 +262,6 @@ def test_user_alert_trigger(create_plain_run: tuple[simvue.Run, dict], status: t
     _alert_id = run.create_user_alert(
         name="test_user_alert_triggered_alert_cli",
         description="Test alert for CLI triggering",
-        trigger_abort=True
     )
     _command = [
         "alert",
@@ -615,7 +616,8 @@ def test_user_and_tenant() -> None:
             "tenant",
             "remove",
             _tenant_id
-        ]
+        ],
+        catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
     with pytest.raises(ObjectNotFoundError):
@@ -680,7 +682,7 @@ def test_whoami() -> None:
             "whoami"
         ]
     )
-    assert result.exit_code == 0, result.stdout
+    assert result.exit_code == 0, (result.stdout, result.stderr)
 
 
 def test_purge(monkeypatch) -> None:
@@ -701,8 +703,94 @@ def test_purge(monkeypatch) -> None:
                 "purge"
             ]
         )
-        assert result.exit_code == 0, result.stdout
+        assert result.exit_code == 0, (result.stdout, result.stderr)
         assert f"{_test_dir.joinpath('.simvue')}" in result.stdout
         assert f"{_test_dir.joinpath('.simvue.toml')}" in result.stdout
         assert not _test_dir.joinpath(".simvue").exists()
         assert not _test_dir.joinpath(".simvue.toml").exists()
+
+
+def test_push_metadata_as_runs_csv(create_metadata_csv: str) -> None:
+    _uuid = f"{uuid4()}".split("-")[0]
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "push",
+            "runs",
+            f"--folder=/simvue_cli_tests/{_uuid}",
+            "--name=test_push_metadata_as_runs_csv",
+            "--tenant",
+            "--metadata",
+            "{\"batch_number\": 0}",
+            "--from-metadata",
+            f"{create_metadata_csv}"
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+    _folder_id = result.stdout.strip()
+    assert _folder_id
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
+    _folder = Folder(identifier=_folder_id)
+    with contextlib.suppress(ObjectNotFoundError):
+        _folder.delete(recursive=True, delete_runs=True)
+
+
+def test_push_metadata_as_runs_json(create_metadata_json: str) -> None:
+    runner = click.testing.CliRunner()
+    _uuid = f"{uuid4()}".split("-")[0]
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "push",
+            "runs",
+            "--tenant",
+            f"--folder=/simvue_cli_tests/{_uuid}",
+            "--name=test_push_metadata_as_runs_json",
+            "--metadata",
+            "{\"batch_number\": 0}",
+            "--from-metadata",
+            f"{create_metadata_json}"
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+    _folder_id = result.stdout.strip()
+    assert _folder_id
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
+    _folder = Folder(identifier=_folder_id, return_stats=True)
+    with contextlib.suppress(ObjectNotFoundError):
+        _folder.delete(recursive=True, delete_runs=True)
+
+
+def test_push_runs(create_runs_json: pathlib.Path) -> None:
+    runner = click.testing.CliRunner()
+    _uuid = f"{uuid4()}".split("-")[0]
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "push",
+            "runs",
+            "--tenant",
+            "--metadata",
+            "{\"batch_number\": 0}",
+            f"--folder=/simvue_cli_tests/{_uuid}",
+            f'{create_runs_json}'
+        ],
+        catch_exceptions=False
+    )
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+    _folder_ids = result.stdout.strip().split("\n")
+    assert _folder_ids
+    client = simvue.Client()
+    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_tests/{_uuid}"], count_limit=200)
+    assert len(list(runs)) == 100
+    _folder = Folder(identifier=_folder_ids[0], return_status=True)
+
+    if _folder := Client().get_folder(f"/simvue_cli_tests/{_uuid}"):
+        _folder.delete(recursive=True, delete_runs=True)

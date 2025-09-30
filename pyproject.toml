@@ -35,7 +35,6 @@ keywords = [
 dependencies = [
     "click-option-group>=0.5.7",
     "click>=8.1.8",
-    "simvue>=2.1.1",
     "click-log>=0.4.0",
     "click-params>=0.5.0",
     "toml>=0.10.2",
@@ -43,6 +42,8 @@ dependencies = [
     "regex>=2024.11.6",
     "requests>=2.32.3",
     "tqdm>=4.67.1",
+    "more-itertools>=10.8.0",
+    "simvue>=2.2.0",
 ]
 
 [project.urls]
@@ -74,7 +75,9 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "faker>=37.8.0",
     "pytest-cov>=6.0.0",
+    "pytest-xdist>=3.8.0",
     "pytest>=8.3.5",
 ]
 docs = [

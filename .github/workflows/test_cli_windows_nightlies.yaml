@@ -1,10 +1,8 @@
-name: Simvue-CLI (macOS)
+name: CLI Nightlies (Windows)
 on:
-  push:
-    branches: ["main", "dev"]
-  pull_request:
-    branches: ["main", "dev"]
   workflow_dispatch:
+  schedule:
+    - cron: '30 22 * * *'
 
 permissions:
   contents: read
@@ -17,7 +15,7 @@ jobs:
   test_build:
     name: Test CLI
     timeout-minutes: 20
-    runs-on: ["macos-latest"]
+    runs-on: ["windows-latest"]
     steps:
       - name: Retrieve Code
         uses: actions/checkout@v4
@@ -27,7 +25,10 @@ jobs:
           python-version: '3.x'
       - name: Install Dependencies
         run: |
-          python -m pip install pytest pytest-cov
+          python -m pip install poetry
+          poetry self add poetry-plugin-export
+          poetry export -f requirements.txt --with dev -o requirements.txt --all-extras
+          python -m pip install -r requirements.txt
           python -m pip install .
       - name: Run Tests
         env:
