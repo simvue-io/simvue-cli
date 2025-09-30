@@ -1,8 +1,8 @@
-# Unreleased
+# [v1.2.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.0) - 2025-09-30
 
 - Added commands for push metadata sets as runs, and pushing runs from a JSON file.
 
-# [v1.1.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.0.1) - 2025-08-12
+# [v1.1.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.1.0) - 2025-08-12
 
 - Various fixes to columns in `list` sub-commands, this includes fixing `N/A` where data could not be found.
 - `--plain` mode now displays all data as expected, with formatting disabled.
