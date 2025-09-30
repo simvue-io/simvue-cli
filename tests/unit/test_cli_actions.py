@@ -179,8 +179,7 @@ def test_run_abort(create_test_run, monkeypatch) -> None:
         _run.id, "terminated", "test CLI abort"
     )
     time.sleep(1)
-    assert _run._sv_obj.status == "terminated"
-    assert _run._status == "terminated"
+    assert _run.status == "terminated"
 
 
 def test_run_artifact_download(create_test_run) -> None:
