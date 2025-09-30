@@ -1,8 +1,8 @@
-name: Simvue-CLI (Ubuntu)
+name: CLI Nightlies (macOS)
 on:
-  pull_request:
-    branches: ["main", "dev"]
   workflow_dispatch:
+  schedule:
+    - cron: '45 22 * * *'
 
 permissions:
   contents: read
@@ -15,7 +15,7 @@ jobs:
   test_build:
     name: Test CLI
     timeout-minutes: 20
-    runs-on: ["ubuntu-latest"]
+    runs-on: ["macos-latest"]
     steps:
       - name: Retrieve Code
         uses: actions/checkout@v4
