@@ -170,7 +170,7 @@ def create_runs_json(monkeypatch) -> pathlib.Path:
                     "tags": ["test_simvue_cli"]
                 }
                 _out_data.append(_run)
-            json.dump(_out_data, out_f, indent=2)
+            json.dump({"runs": _out_data}, out_f, indent=2)
         yield _file_path
     with contextlib.suppress(FileNotFoundError):
         _file_path.unlink()
