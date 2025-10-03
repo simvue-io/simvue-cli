@@ -12,8 +12,6 @@ __date__ = "2024-09-09"
 import pathlib
 import sys
 import shutil
-import typing
-from urllib.request import AbstractDigestAuthHandler
 import click
 import json
 import time
@@ -2059,7 +2057,7 @@ def push(ctx) -> None:
     ),
 )
 @click.option("--name", default=None, help="Name to set to all runs.")
-@click.option("--folder", default="/", help="Simvue folder to add runs to.")
+@click.option("--folder", default=None, help="Simvue folder to add runs to.")
 @click.option(
     "--tenant",
     "tenant_visible",

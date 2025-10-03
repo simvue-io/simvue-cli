@@ -2,6 +2,7 @@ import pydantic
 import csv
 from .core import PushAPI
 from simvue.api.objects import Folder
+from .validate import JsonMetadataUpload
 
 
 class PushDelimited(PushAPI):
@@ -17,8 +18,13 @@ class PushDelimited(PushAPI):
         _folder = Folder.new(path=folder)
         _folder.commit()
         with input_file.open(newline="") as in_f:
-            for i, row in enumerate(csv.DictReader(in_f, delimiter=delimiter)):
-                self.add_run(metadata=row, folder=folder, name=f"{name}-{i}" if name else None)
+            _metadata_entries = JsonMetadataUpload(
+                metadata=csv.DictReader(in_f, delimiter=delimiter)
+            )
+            for i, row in enumerate(_metadata_entries.metadata):
+                self.add_run(
+                    metadata=row, folder=folder, name=f"{name}-{i}" if name else None
+                )
         self.push()
         return _folder.id
 

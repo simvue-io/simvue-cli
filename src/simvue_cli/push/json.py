@@ -1,6 +1,8 @@
 import pydantic
 import json
 
+from .validate import JsonRunUpload, JsonMetadataUpload
+
 from .core import PushAPI
 from simvue.api.objects import Folder
 
@@ -8,48 +10,58 @@ from simvue.api.objects import Folder
 class PushJSON(PushAPI):
     @pydantic.validate_call
     def load_from_metadata(
-        self, input_file: pydantic.FilePath, *, folder: str, name: str | None = None,
+        self,
+        input_file: pydantic.FilePath,
+        *,
+        folder: str,
+        name: str | None = None,
     ) -> str | None:
         with input_file.open() as in_f:
-            _data = json.load(in_f)
+            _data = JsonMetadataUpload(metadata=json.load(in_f))
 
         _folder = Folder.new(path=folder)
         _folder.commit()
 
-        if not isinstance(_data, list):
-            raise ValueError("Expected JSON content to be a list.")
-
-        for i, json_block in enumerate(_data):
-            self.add_run(name=f"{name}-{i}" if name else None, metadata=json_block, folder=folder)
+        for i, json_block in enumerate(_data.metadata):
+            self.add_run(
+                name=f"{name}-{i}" if name else None, metadata=json_block, folder=folder
+            )
 
         self.push()
         return _folder.id
 
     @pydantic.validate_call
-    def load(self, input_file: pydantic.FilePath, *, folder: str, name: str | None = None) -> list[str | None]:
+    def load(
+        self,
+        input_file: pydantic.FilePath,
+        *,
+        folder: str | None = None,
+        name: str | None = None,
+    ) -> list[str | None]:
         with input_file.open() as in_f:
-            _data = json.load(in_f)
+            _data = JsonRunUpload(**json.load(in_f))
 
-        _folder = Folder.new(path=folder)
+        _folder_name = folder or _data.folder
+        _folder_name = _folder_name or "/"
+        _folder = Folder.new(path=_folder_name)
         _folder.commit()
 
         _folder_ids: list[str | None] = [_folder.id]
 
-        if not isinstance(_data, list):
-            raise ValueError("Expected JSON content to be a list.")
-
-        for i, json_block in enumerate(_data):
-            if _folder_path := json_block.get("folder"):
-                _folder = Folder.new(path=_folder_path)
+        for i, _run in enumerate(_data.runs):
+            if _folder_path := _run.folder:
+                _folder_name = f"{_folder_name}{_folder_path}"
+                _folder_name = _folder_name.replace("//", "/")
+                _folder = Folder.new(path=_folder_name)
                 _folder.commit()
 
                 _folder_ids.append(_folder.id)
             self.add_run(
-                folder=folder or json_block.get("folder"),
-                name=f"{name}-{i}" if name else None or json_block.get("name"),
-                description=json_block.get("description"),
-                metadata=json_block.get("metadata"),
-                metrics=json_block.get("metrics"),
+                folder=_folder_name,
+                name=f"{name}-{i}" if name else None or _run.name,
+                description=_run.description,
+                metadata=_run.metadata,
+                metrics=_run.metrics,
             )
         self.push()
         return _folder_ids

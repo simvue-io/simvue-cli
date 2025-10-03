@@ -829,7 +829,7 @@ def push_json_metadata(
 def push_json_runs(
     input_file: pathlib.Path,
     *,
-    folder: str,
+    folder: str | None,
     name: str | None,
     tenant_visible: bool,
     public_visible: bool,
