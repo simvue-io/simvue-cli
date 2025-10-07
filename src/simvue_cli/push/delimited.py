@@ -19,7 +19,7 @@ class PushDelimited(PushAPI):
         _folder.commit()
         with input_file.open(newline="") as in_f:
             _metadata_entries = JsonMetadataUpload(
-                metadata=csv.DictReader(in_f, delimiter=delimiter)
+                metadata=list(csv.DictReader(in_f, delimiter=delimiter))
             )
             for i, row in enumerate(_metadata_entries.metadata):
                 self.add_run(

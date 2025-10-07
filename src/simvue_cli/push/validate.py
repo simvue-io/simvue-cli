@@ -6,9 +6,11 @@ import pydantic
 
 from simvue.models import NAME_REGEX, FOLDER_REGEX, MetadataKeyString, MetricKeyString
 
+MetadataList = list[dict[MetadataKeyString, int | float | str]]
+
 
 class JsonMetadataUpload(pydantic.BaseModel):
-    metadata: list[dict[MetadataKeyString, int | float | str]] | DictReader[str]
+    metadata: MetadataList
 
 
 class JsonRun(pydantic.BaseModel):
