@@ -1,12 +1,32 @@
 """Validation for CLI inputs."""
 
+import contextlib
 from csv import DictReader
 from typing import Annotated
 import pydantic
 
 from simvue.models import NAME_REGEX, FOLDER_REGEX, MetadataKeyString, MetricKeyString
 
-MetadataList = list[dict[MetadataKeyString, int | float | str]]
+
+def convert_data(value: str | float | int) -> str | float | int:
+    """Convert numeric values from string to number."""
+    if not isinstance(value, str):
+        return value
+    if value.count(".") == 1:
+        with contextlib.suppress(ValueError):
+            value = float(value)
+    else:
+        with contextlib.suppress(ValueError):
+            value = int(value)
+    return value
+
+
+MetadataList = list[
+    dict[
+        MetadataKeyString,
+        Annotated[int | float | str, pydantic.BeforeValidator(convert_data)],
+    ]
+]
 
 
 class JsonMetadataUpload(pydantic.BaseModel):
