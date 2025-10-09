@@ -21,16 +21,14 @@ def convert_data(value: str | float | int) -> str | float | int:
     return value
 
 
-MetadataList = list[
-    dict[
-        MetadataKeyString,
-        Annotated[int | float | str, pydantic.BeforeValidator(convert_data)],
-    ]
+Metadata = dict[
+    MetadataKeyString,
+    Annotated[int | float | str, pydantic.BeforeValidator(convert_data)],
 ]
 
 
-class JsonMetadataUpload(pydantic.BaseModel):
-    metadata: MetadataList
+class MetadataUpload(pydantic.BaseModel):
+    metadata: list[Metadata]
 
 
 class JsonRun(pydantic.BaseModel):

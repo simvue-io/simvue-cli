@@ -1,7 +1,7 @@
 import pydantic
 import json
 
-from .validate import JsonRunUpload, JsonMetadataUpload
+from .validate import JsonRunUpload, MetadataUpload
 
 from .core import PushAPI
 from simvue.api.objects import Folder
@@ -17,7 +17,7 @@ class PushJSON(PushAPI):
         name: str | None = None,
     ) -> str | None:
         with input_file.open() as in_f:
-            _data = JsonMetadataUpload(metadata=json.load(in_f))
+            _data = MetadataUpload(metadata=json.load(in_f))
 
         _folder = Folder.new(path=folder)
         _folder.commit()
