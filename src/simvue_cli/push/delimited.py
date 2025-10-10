@@ -11,11 +11,12 @@ class PushDelimited(PushAPI):
         self,
         input_file: pydantic.FilePath,
         *,
-        folder: str,
+        folder: str | None = None,
         delimiter: str = ",",
         name: str | None = None,
     ) -> str | None:
-        _folder = Folder.new(path=folder)
+        _folder_name = folder or "/"
+        _folder = Folder.new(path=_folder_name)
         _folder.commit()
         with input_file.open(newline="") as in_f:
             for i, row in enumerate(csv.DictReader(in_f, delimiter=delimiter)):
