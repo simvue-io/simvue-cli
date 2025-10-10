@@ -1,3 +1,8 @@
+# Unreleased
+
+- Fixes to push command functionality.
+- Added parsing of float and integer strings to numeric values in CSV reading.
+
 # [v1.2.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.0) - 2025-09-30
 
 - Added commands for push metadata sets as runs, and pushing runs from a JSON file.

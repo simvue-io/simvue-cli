@@ -106,7 +106,7 @@ def setup_test_run(run: sv_run.Run, create_objects: bool, request: pytest.Fixtur
 @pytest.fixture
 def create_metadata_csv() -> pathlib.Path:
     N_RUNS: int = 100
-    _headers = ("first_name", "last_name", "email", "date")
+    _headers = ("first_name", "last_name", "email", "date", "pyfloat")
     _fake = faker.Faker()
     with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp_f:
         _file_path = pathlib.Path(temp_f.name)
@@ -117,7 +117,7 @@ def create_metadata_csv() -> pathlib.Path:
                     getattr(_fake, header)()
                     for header in _headers
                 ]
-                out_f.write(",".join(_row) + "\n")
+                out_f.write(",".join(str(i) for i in _row) + "\n")
         yield _file_path
     with contextlib.suppress(FileNotFoundError):
         _file_path.unlink()
@@ -128,7 +128,7 @@ def create_metadata_json(monkeypatch) -> pathlib.Path:
     import simvue_cli.push.core
     monkeypatch.setattr(simvue_cli.push.core, "BATCH_RUN_LIMIT", 10)
     N_RUNS: int = 100
-    _headers = ("first_name", "last_name", "email", "date")
+    _headers = ("first_name", "last_name", "email", "date", "pyfloat")
     _fake = faker.Faker()
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_f:
         _file_path = pathlib.Path(temp_f.name)
@@ -167,10 +167,10 @@ def create_runs_json(monkeypatch) -> pathlib.Path:
                     "name": _fake.name(),
                     "description": _fake.text(),
                     "metadata": {_fake.name(): _fake.name()},
-                    "tags": ["test_simvue_cli"]
+                    "tags": ["test_simvue_cli"],
                 }
                 _out_data.append(_run)
-            json.dump(_out_data, out_f, indent=2)
+            json.dump({"runs": _out_data}, out_f, indent=2)
         yield _file_path
     with contextlib.suppress(FileNotFoundError):
         _file_path.unlink()

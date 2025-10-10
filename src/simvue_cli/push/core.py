@@ -11,6 +11,8 @@ from simvue.api.objects.base import ObjectBatchArgs, VisibilityBatchArgs
 from simvue.api.objects.run import RunBatchArgs
 from simvue.models import FOLDER_REGEX, DATETIME_FORMAT, MetricSet
 
+from simvue_cli.push.validate import Metadata
+
 PUSHABLE_OBJECTS: set[str] = {"run"}
 BATCH_RUN_LIMIT: int = 20_000
 
@@ -52,7 +54,7 @@ class PushAPI(abc.ABC):
     @pydantic.validate_call
     def global_metadata(self, metadata: str | dict[str, object]) -> None:
         if isinstance(metadata, str):
-            metadata = json.loads(metadata)
+            metadata: Metadata = json.loads(metadata)
         self._metadata = metadata
 
     def add_run(
@@ -61,7 +63,7 @@ class PushAPI(abc.ABC):
         folder: str,
         name: str | None = None,
         description: str | None = None,
-        metadata: dict[str, object] | None = None,
+        metadata: Metadata | None = None,
         metrics: list[dict[str, float | int]] | None = None,
         status: typing.Literal[
             "completed", "failed", "lost", "terminated"
