@@ -13,13 +13,14 @@ class PushJSON(PushAPI):
         self,
         input_file: pydantic.FilePath,
         *,
-        folder: str,
+        folder: str | None = None,
         name: str | None = None,
     ) -> str | None:
         with input_file.open() as in_f:
             _data = MetadataUpload(metadata=json.load(in_f))
 
-        _folder = Folder.new(path=folder)
+        _folder_name = folder or "/"
+        _folder = Folder.new(path=_folder_name)
         _folder.commit()
 
         for i, json_block in enumerate(_data.metadata):
