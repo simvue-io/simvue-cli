@@ -44,7 +44,7 @@ dependencies = [
     "requests>=2.32.3",
     "tqdm>=4.67.1",
     "more-itertools>=10.8.0",
-    "simvue>=2.2.0",
+    "simvue>=2.2.1",
 ]
 
 [project.urls]

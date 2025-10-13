@@ -336,7 +336,7 @@ name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
 wheels = [
@@ -445,11 +445,11 @@ wheels = [
 
 [[package]]
 name = "idna"
-version = "3.10"
+version = "3.11"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f1/70/7703c29685631f5a7590aa73f1f1d3fa9a380e654b86af429e0934a32f7d/idna-3.10.tar.gz", hash = "sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9", size = 190490, upload-time = "2024-09-15T18:07:39.745Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6f/6d/0703ccc57f3a7233505399edb88de3cbd678da106337b9fcde432b65ed60/idna-3.11.tar.gz", hash = "sha256:795dafcc9c04ed0c1fb032c2aa73654d8e8c5023a7df64a53f39190ada629902", size = 194582, upload-time = "2025-10-12T14:55:20.501Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/c6/c88e154df9c4e1a2a66ccf0005a88dfb2650c1dffb6f5ce603dfbd452ce3/idna-3.10-py3-none-any.whl", hash = "sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3", size = 70442, upload-time = "2024-09-15T18:07:37.964Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/61/66938bbb5fc52dbdf84594873d5b51fb1f7c7794e9c0f5bd885f30bc507b/idna-3.11-py3-none-any.whl", hash = "sha256:771a87f49d9defaf64091e6e6fe9c18d4833f140bd19464795bc32d966ca37ea", size = 71008, upload-time = "2025-10-12T14:55:18.883Z" },
 ]
 
 [[package]]
@@ -1380,7 +1380,7 @@ wheels = [
 
 [[package]]
 name = "simvue"
-version = "2.2.0"
+version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1407,9 +1407,9 @@ dependencies = [
     { name = "toml" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9f/dd/5cb80de259b3de34b4e6ab53dd04fd17e2b98a1a1c1c10b7f0f9f9db04e0/simvue-2.2.0.tar.gz", hash = "sha256:356536ef8b256e29a4a399625230beea4bc4de428b4def88dc0ac07844dbcbb8", size = 119916, upload-time = "2025-09-22T07:29:57.606Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/70/fc/665483c0ff8c7352ca8df55ee1f850fa0863c9d9cd660dd1baac5f35a595/simvue-2.2.1.tar.gz", hash = "sha256:426640b6a5fa86865c2bfcea3527a1babc95d1a641c16b00caf331ba31ac8f07", size = 121035, upload-time = "2025-10-13T13:00:29.795Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/b4/35c858b2bf9e19efefee91d0704b4566dc907ee78c617ab15b490dc05e01/simvue-2.2.0-py3-none-any.whl", hash = "sha256:3dddabeb6fff9733e8ca66b7e7e57be566d6f1d714be85d28b4c595c650accfe", size = 151323, upload-time = "2025-09-22T07:29:55.916Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/e4/676bd842dc9bfea80dcff626d1412db9e0c435728acd232508ecad8c7c52/simvue-2.2.1-py3-none-any.whl", hash = "sha256:b683c3d47993a52d8e4ba7c6d117bb1179398baac317f42dae0b75088239b2af", size = 152603, upload-time = "2025-10-13T13:00:28.303Z" },
 ]
 
 [[package]]
@@ -1455,7 +1455,7 @@ requires-dist = [
     { name = "more-itertools", specifier = ">=10.8.0" },
     { name = "regex", specifier = ">=2024.11.6" },
     { name = "requests", specifier = ">=2.32.3" },
-    { name = "simvue", specifier = ">=2.2.0" },
+    { name = "simvue", specifier = ">=2.2.1" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "toml", specifier = ">=0.10.2" },
     { name = "tqdm", specifier = ">=4.67.1" },
