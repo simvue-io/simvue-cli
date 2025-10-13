@@ -1,3 +1,7 @@
+# Unreleased
+
+- Added support for Python 3.14.
+
 # [v1.2.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.0) - 2025-09-30
 
 - Added commands for push metadata sets as runs, and pushing runs from a JSON file.
