@@ -75,7 +75,7 @@ def test_runs_json(create_test_run: tuple[simvue.Run, dict]) -> None:
         ]
     )
     assert result.exit_code == 0, result.output
-    json_data = json.loads(result.output.replace("'", '"'))
+    json_data = json.loads(result.output)
     assert isinstance(json_data, dict), f"Expected dictionary got '{result.output}'"
     assert sorted(json_data.get("tags")) == sorted(run_data["tags"])
 
