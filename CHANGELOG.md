@@ -1,7 +1,7 @@
 # [v1.2.1](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.1) - 2025-10-13
 
-- Added validation of inputs for metadata push.
-- Added support for Python 3.14.
+- Fixes to push command functionality.
+- Added parsing of float and integer strings to numeric values in CSV reading.
 
 # [v1.2.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.0) - 2025-09-30
 
