@@ -1,3 +1,7 @@
+# [v1.2.2](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.2) - 2025-10-14
+
+- Added support for Python3.14.
+
 # [v1.2.1](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.1) - 2025-10-13
 
 - Fixes to push command functionality.
