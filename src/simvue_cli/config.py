@@ -17,6 +17,12 @@ SIMVUE_CONFIG_FILENAME: str = "simvue.toml"
 SIMVUE_CONFIG_INI_FILENAME: str = "simvue.ini"
 
 
+def get_current_configuration() -> dict[str, str]:
+    """Return the current Simvue configuration."""
+    _config: SimvueConfiguration = SimvueConfiguration.fetch()
+    return _config.model_dump(mode="json")
+
+
 def set_configuration_option(
     section: str, key: str, value: str | int | float, local: bool
 ) -> pathlib.Path:

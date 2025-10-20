@@ -28,6 +28,7 @@ import simvue as simvue_client
 from simvue.api.objects import Alert, Run, Folder, S3Storage, Tag, Storage, Artifact
 from simvue.api.objects.administrator import User, Tenant
 from simvue.exception import ObjectNotFoundError
+import toml
 
 import simvue_cli.config
 import simvue_cli.actions
@@ -207,6 +208,14 @@ def config_set_token(ctx, token: str) -> None:
         section="server", key="token", value=token, local=ctx.obj["local"]
     )
     click.secho(f"Wrote token value to '{out_file}'")
+
+
+@config.command("show")
+@click.pass_context
+def config_show(ctx) -> None:
+    """Show the current Simvue configuration."""
+    _config = simvue_cli.config.get_current_configuration()
+    click.secho(toml.dumps(_config))
 
 
 @simvue.group("run")
