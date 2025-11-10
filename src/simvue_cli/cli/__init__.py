@@ -214,7 +214,8 @@ def config_set_token(ctx, token: str) -> None:
 @click.pass_context
 def config_show(ctx) -> None:
     """Show the current Simvue configuration."""
-    _config = simvue_cli.config.get_current_configuration()
+    _config_file, _config = simvue_cli.config.get_current_configuration()
+    click.secho(f"Using configuration from '{_config_file}'.")
     click.secho(toml.dumps(_config))
 
 
