@@ -33,4 +33,6 @@ jobs:
         env:
           SIMVUE_URL: ${{ secrets.SIMVUE_URL }}
           SIMVUE_TOKEN: ${{ secrets.SIMVUE_TOKEN }}
-        run: uv run --python ${{ matrix.python_version }} pytest -x --cov=simvue_cli --cov-report=term --cov-report=xml -c /dev/null -p no:warnings -v
+        run: |
+          uv run --python 3.14 \
+          pytest -x --cov=simvue_cli --cov-report=term --cov-report=xml -c /dev/null -p no:warnings -v
