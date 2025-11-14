@@ -1380,7 +1380,7 @@ wheels = [
 
 [[package]]
 name = "simvue"
-version = "2.2.2"
+version = "2.2.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1407,9 +1407,9 @@ dependencies = [
     { name = "toml" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4a/32/87836823d2a5eef912e68aca7c79ec532496b2453ee01a18252b92b9a0ab/simvue-2.2.2.tar.gz", hash = "sha256:e1135fecabc58181b6e1d6991c19d819a90cba61d7aa6b0d9c580531854910c3", size = 121030, upload-time = "2025-10-14T07:50:56.322Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/12/f9360c0a9213b75cbec089faee831f134473798f913cc960f52c998e6248/simvue-2.2.4.tar.gz", hash = "sha256:bd2deb09b95ee47f514e9fd565b2ba69af940e35149d9b4743ef44644a7665cf", size = 121201, upload-time = "2025-11-13T09:55:45.558Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/cd/b7633095b0cd20ce173ee4a5904076c35d5698de2f6ca58b4a0af25577a6/simvue-2.2.2-py3-none-any.whl", hash = "sha256:7591a61f19f1f42401ee0ec28d6ee3895c9f3ed357f55754ca0d2c9e402e72fb", size = 152608, upload-time = "2025-10-14T07:50:54.926Z" },
+    { url = "https://files.pythonhosted.org/packages/34/e2/5e20204589c3161d550cff050c31e501a78845cf24a81395558cb61ea641/simvue-2.2.4-py3-none-any.whl", hash = "sha256:87e296ebd4edd2067dde942c3270fa65dfb79c60bdd68739dbfdcd3239ed2f31", size = 152858, upload-time = "2025-11-13T09:55:43.944Z" },
 ]
 
 [[package]]
@@ -1457,7 +1457,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.9" },
     { name = "regex", specifier = ">=2024.11.6" },
     { name = "requests", specifier = ">=2.32.3" },
-    { name = "simvue", specifier = ">=2.2.2" },
+    { name = "simvue", specifier = ">=2.2.3" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "toml", specifier = ">=0.10.2" },
     { name = "tqdm", specifier = ">=4.67.1" },

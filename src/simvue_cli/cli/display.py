@@ -10,6 +10,8 @@ __date__ = "2024-09-09"
 from simvue.api.objects.base import SimvueObject
 
 import tabulate
+import re
+import flatdict
 import typing
 import click
 from pydantic_extra_types.color import RGBA
@@ -192,9 +194,23 @@ def create_objects_display(
         if enumerate_:
             row.append(str(i))
 
+        _flat_dict_delim: str = ":"
+
         for column in columns:
+            if _keys := re.findall(r"^(\w+)\.", column):
+                _elements = flatdict.FlatDict(
+                    getattr(obj, _keys[0]), delimiter=_flat_dict_delim
+                )
+                try:
+                    _metadata_key = column.replace(f"{_keys[0]}.", "").strip()
+                    value = _elements[_metadata_key.replace(".", _flat_dict_delim)]
+                    if isinstance(value, flatdict.FlatDict):
+                        value = ", ".join(f"{k}=..." for k in value.keys())
+                except KeyError:
+                    value = "N/A"
+
             # FIXME: Hack for if a property has not been added to the API yet
-            if not (value := getattr(obj, column, None)):
+            elif not (value := getattr(obj, column, None)):
                 try:
                     value = obj._get_attribute(column)
                 except KeyError:
