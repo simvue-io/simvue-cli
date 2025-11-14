@@ -12,8 +12,6 @@ __date__ = "2024-09-09"
 import pathlib
 import sys
 import shutil
-import typing
-from urllib.request import AbstractDigestAuthHandler
 import click
 import json
 import time
@@ -30,6 +28,7 @@ import simvue as simvue_client
 from simvue.api.objects import Alert, Run, Folder, S3Storage, Tag, Storage, Artifact
 from simvue.api.objects.administrator import User, Tenant
 from simvue.exception import ObjectNotFoundError
+import toml
 
 import simvue_cli.config
 import simvue_cli.actions
@@ -209,6 +208,15 @@ def config_set_token(ctx, token: str) -> None:
         section="server", key="token", value=token, local=ctx.obj["local"]
     )
     click.secho(f"Wrote token value to '{out_file}'")
+
+
+@config.command("show")
+@click.pass_context
+def config_show(ctx) -> None:
+    """Show the current Simvue configuration."""
+    _config_file, _config = simvue_cli.config.get_current_configuration()
+    click.secho(f"Using configuration from '{_config_file}'.")
+    click.secho(toml.dumps(_config))
 
 
 @simvue.group("run")
@@ -2059,7 +2067,7 @@ def push(ctx) -> None:
     ),
 )
 @click.option("--name", default=None, help="Name to set to all runs.")
-@click.option("--folder", default="/", help="Simvue folder to add runs to.")
+@click.option("--folder", default=None, help="Simvue folder to add runs to.")
 @click.option(
     "--tenant",
     "tenant_visible",

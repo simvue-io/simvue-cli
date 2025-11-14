@@ -1,15 +1,12 @@
 import contextlib
-from logging import critical
 import random
 import string
 import typing
 from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
-from numpy import rec
 from simvue.api.objects import Alert, Folder, Storage, Tenant, User
 from simvue.client import ObjectNotFoundError, Client
 from simvue.run import RunObject
-import tabulate
 import simvue
 import time
 import tempfile
@@ -78,7 +75,7 @@ def test_runs_json(create_test_run: tuple[simvue.Run, dict]) -> None:
         ]
     )
     assert result.exit_code == 0, result.output
-    json_data = json.loads(result.output.replace("'", '"'))
+    json_data = json.loads(result.output)
     assert isinstance(json_data, dict), f"Expected dictionary got '{result.output}'"
     assert sorted(json_data.get("tags")) == sorted(run_data["tags"])
 
@@ -471,9 +468,12 @@ def test_add_remove_storage() -> None:
     bucket="dummy_bucket"
     is_enabled=False
 
-    with tempfile.NamedTemporaryFile() as temp_f:
-        with open(temp_f.name, "w") as out_f:
-            out_f.write("not_a_key")
+    _temp_file: pathlib.Path | None = None
+
+    with tempfile.NamedTemporaryFile(delete=False) as temp_f:
+        _temp_file = pathlib.Path(temp_f.name)
+        with _temp_file.open("w") as out_f:
+            _ =out_f.write(secret_access_key)
 
         result = runner.invoke(
             sv_cli.simvue,
@@ -511,6 +511,9 @@ def test_add_remove_storage() -> None:
     assert result.exit_code == 0, result.output
     with pytest.raises(ObjectNotFoundError):
         Storage(identifier=storage_id)
+
+    if _temp_file:
+        _temp_file.unlink()
 
 
 def test_storage() -> None:
@@ -628,8 +631,10 @@ def test_user_and_tenant() -> None:
 
 @pytest.mark.unix
 def test_simvue_monitor() -> None:
-    with tempfile.NamedTemporaryFile(suffix=".sh") as out_f:
-        with open(out_f.name, "w", encoding="utf-8") as f_write:
+    _temp_file: pathlib.Path | None = None
+    with tempfile.NamedTemporaryFile(suffix=".sh", delete=False) as out_f:
+        _temp_file = pathlib.Path(out_f.name)
+        with _temp_file.open("w", encoding="utf-8") as f_write:
             f_write.write(
                 """# Firstly echo headers
 echo -e "x\ty"
@@ -670,6 +675,8 @@ done
     time.sleep(1.0)
     client = simvue.Client()
     _, run_data = next(client.get_runs(filters=["has tag.test_simvue_monitor"]))
+    if _temp_file:
+        _temp_file.unlink()
     assert run_data
     assert client.get_metric_values(run_ids=[run_data.id], metric_names=["x", "y"], xaxis="step")
 

@@ -227,8 +227,10 @@ def test_metadata_push_csv(create_metadata_csv: pathlib.Path) -> None:
     )
     assert _folder_id
     client = simvue.Client()
-    runs = client.get_runs(filters=[f"folder.path == /simvue_cli_testing/{_uuid}"], count_limit=200)
-    assert len(list(runs)) == 100
+    runs = list(client.get_runs(filters=[f"folder.path == /simvue_cli_testing/{_uuid}"], count_limit=200, metadata=True))
+    assert len(runs) == 100
+    for _, run in runs:
+        assert isinstance(run.metadata["pyfloat"], float)
     with contextlib.suppress(Exception):
         Folder(identifier=_folder_id).delete(delete_runs=True, recursive=True)
 
