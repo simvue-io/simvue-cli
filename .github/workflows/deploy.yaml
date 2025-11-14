@@ -18,6 +18,8 @@ jobs:
           python-version: "3.x"
       - name: Install UV
         run: python -m pip install uv
+      - name: Build CLI
+        run: uv run pyinstaller deploy/simvue_cli.spec
       - name: Build Module
         run: uv build
       - name: Store the distribution packages
