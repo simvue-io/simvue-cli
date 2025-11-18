@@ -44,7 +44,7 @@ dependencies = [
     "requests>=2.32.3",
     "tqdm>=4.67.1",
     "more-itertools>=10.8.0",
-    "simvue>=2.2.2",
+    "simvue>=2.2.4",
     "pydantic>=2.11.9",
 ]
 
