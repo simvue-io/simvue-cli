@@ -433,7 +433,8 @@ def update_metadata(run_id: str, metadata: dict) -> None:
 @click.option("-f", "--folder", is_flag=True, help="Show folder")
 @click.option(
     "-F",
-    "--filters",
+    "--filter",
+    "filters",
     multiple=True,
     help="""
 Apply filters when searching runs.
