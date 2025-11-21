@@ -37,7 +37,8 @@ def setup_test_run(run: sv_run.Run, create_objects: bool, request: pytest.Fixtur
         "event_contains": "sent event",
         "metadata": {
             "test_engine": "pytest",
-            "test_identifier": f"{_test_name}_{fix_use_id}"
+            "test_identifier": f"{_test_name}_{fix_use_id}",
+            "random_int": 10
         },
         "folder": f"/simvue_cli_testing/{fix_use_id}",
         "tags": ["simvue_cli_testing", _test_name], 

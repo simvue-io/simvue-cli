@@ -11,6 +11,7 @@ __date__ = "2024-09-09"
 import io
 import pathlib
 import json
+import re
 import sys
 import tqdm
 import typing
@@ -26,6 +27,7 @@ import simvue.api.request as sv_api
 import simvue.metadata as sv_meta
 
 from datetime import datetime, timezone
+from collections.abc import Generator
 
 from simvue.run import get_system
 from simvue.client import Client
@@ -302,19 +304,74 @@ def user_info() -> dict:
     return Stats().whoami()
 
 
+def parse_filters(filters: list[str]) -> list[str]:
+    """Convert CLI filters into Simvue filters."""
+    _out_filters: list[str] = []
+    _filter_symbols: tuple[str, ...] = (
+        "==",
+        "=",
+        "~",
+        "!=",
+        "!~",
+        ">",
+        "<",
+        ">=",
+        "<=",
+    )
+
+    for filter in filters:
+        _filter = filter
+        _variable: str = re.findall(r"^!*[\w\.\_]+", _filter)[0]
+
+        if _filter.strip() == _variable:
+            _out_filters.append(_variable)
+            continue
+
+        if _filter.strip() == f"{_variable}=":
+            _out_filters.append(f"{_variable} exists")
+            continue
+
+        if f"{_filter.strip()}" == f"{_variable}!=":
+            _out_filters.append(f"{_variable} not exists")
+            continue
+
+        if _variable == "folder" and ".path" not in _filter:
+            _filter = _filter.replace("folder", "folder.path")
+        elif _variable == "tag":
+            if "!=" in _filter:
+                _filter = _filter.replace("!=", "")
+                _filter = _filter.replace("tag", "has not tag.")
+            else:
+                _filter = _filter.replace("==", "")
+                _filter = _filter.replace("tag", "has tag.")
+        for symbol in ("!=", ">", "<", "<=", ">="):
+            _filter = _filter.replace(symbol, f" {symbol} ")
+        if "=" in _filter and "==" not in _filter and "!=" not in _filter:
+            _filter = _filter.replace("=", "==")
+        if "~" in _filter:
+            _filter = _filter.replace("~", " contains ")
+        if "==" in _filter and " == " not in _filter:
+            _filter = _filter.replace("==", " == ")
+        _out_filters.append(_filter)
+    return _out_filters
+
+
 def get_runs_list(
-    sort_by: list[str], reverse: bool, **kwargs
-) -> typing.Generator[tuple[str, Run], None, None]:
+    sort_by: list[str], reverse: bool, filters: list[str], **kwargs
+) -> Generator[tuple[str, Run], None, None]:
     """Retrieve list of Simvue runs"""
     _sorting: list[dict[str, str]] = [
         {"column": c, "descending": not reverse} for c in sort_by
     ]
-    return Run.get(sorting=_sorting, **kwargs)
+
+    _filters = parse_filters(filters)
+
+    return Run.get(sorting=_sorting, filters=json.dumps(_filters), **kwargs)
 
 
 def get_alerts_list(
     sort_by: list[str], reverse: bool, **kwargs
-) -> typing.Generator[
+) -> Generator[
     tuple[str, MetricsRangeAlert | MetricsThresholdAlert | EventsAlert | UserAlert],
     None,
     None,
@@ -326,12 +383,15 @@ def get_alerts_list(
     return Alert.get(sorting=_sorting, **kwargs)
 
 
-def get_tag_list(sort_by: list[str], reverse: bool, **kwargs) -> None:
+def get_tag_list(
+    sort_by: list[str], reverse: bool, filters: list[str], **kwargs
+) -> None:
     """Retrieve list of Simvue tags"""
     _sorting: list[dict[str, str]] = [
         {"column": c, "descending": not reverse} for c in sort_by
     ]
-    return Tag.get(sorting=_sorting, **kwargs)
+    _filters = parse_filters(filters)
+    return Tag.get(sorting=_sorting, filters=json.dumps(_filters), **kwargs)
 
 
 def get_storages_list(**kwargs) -> typing.Generator[tuple[str, Storage], None, None]:

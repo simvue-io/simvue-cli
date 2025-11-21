@@ -10,6 +10,7 @@ __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
 import pathlib
+import re
 import sys
 import shutil
 import click
@@ -398,7 +399,7 @@ def update_metadata(run_id: str, metadata: dict) -> None:
     simvue_cli.actions.update_metadata(run_id, metadata)
 
 
-@simvue_run.command("list")
+@simvue_run.command("list", context_settings={"ignore_unknown_options": True})
 @click.pass_context
 @click.option(
     "--format",
@@ -422,13 +423,53 @@ def update_metadata(run_id: str, metadata: dict) -> None:
     default=20,
     show_default=True,
 )
-@click.option("--tags", is_flag=True, help="Show tags")
-@click.option("--name", is_flag=True, help="Show names")
-@click.option("--user", is_flag=True, help="Show users")
-@click.option("--created", is_flag=True, help="Show created timestamp")
-@click.option("--description", is_flag=True, help="Show description")
-@click.option("--status", is_flag=True, help="Show status")
-@click.option("--folder", is_flag=True, help="Show folder")
+@click.option("-T", "--tags", is_flag=True, help="Show tags")
+@click.option("-n", "--name", is_flag=True, help="Show names")
+@click.option("-u", "--user", is_flag=True, help="Show users")
+@click.option("-t", "--created", is_flag=True, help="Show created timestamp")
+@click.option("-d", "--description", is_flag=True, help="Show description")
+@click.option("-s", "--status", is_flag=True, help="Show status")
+@click.option("-m", "--metadata", multiple=True, help="Show metadata value")
+@click.option("-f", "--folder", is_flag=True, help="Show folder")
+@click.option(
+    "-F",
+    "--filter",
+    "filters",
+    multiple=True,
+    help="""
+Apply filters when searching runs.
+
+Accepts filters in the form of <column><comparator><value>, with multiple instances
+of this option being allowed. The comparators allowed vary depending on the column being
+filtered by:
+
+>        Greater than
+
+<        Less than
+
+>=       Greater than or equal to
+
+<=       Less than or equal to
+
+= or ==  Equal to (no value implies general 'exists')
+
+!=       Not equal to (no value implies general 'does not exist')
+
+~        Contains
+
+!~       Does not contain
+
+Examples
+
+    --filter folder=/unit_tests
+
+    --filter 'metadata.custom_meta>10'
+
+    --filter starred
+
+    --filter name~test
+""",
+)
 @click.option(
     "--sort-by",
     help="Specify columns to sort by",
@@ -438,6 +479,7 @@ def update_metadata(run_id: str, metadata: dict) -> None:
     show_default=True,
 )
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
+@click.argument("args", nargs=-1, type=click.UNPROCESSED)
 def list_runs(
     ctx,
     table_format: str,
@@ -449,12 +491,18 @@ def list_runs(
     name: bool,
     folder: bool,
     status: bool,
+    args: str,
     **kwargs,
 ) -> None:
     """Retrieve runs list from Simvue server"""
-    kwargs |= {"filters": kwargs.get("filters" or [])}
+    _metadata = [
+        arg.replace("--", "") for arg in args if re.findall("^--metadata", arg)
+    ]
+
+    if _metadata:
+        kwargs["metadata"] = True
     runs = simvue_cli.actions.get_runs_list(**kwargs)
-    columns = ["id"]
+    columns = ["id"] + _metadata
 
     if created:
         columns.append("created")
