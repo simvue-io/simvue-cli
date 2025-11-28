@@ -1,3 +1,8 @@
+# Unreleased
+
+- Added filtering to `simvue run list` command.
+- Added ability to include metadata columns in run list.
+
 # [v1.2.2](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.2) - 2025-10-14
 
 - Added support for Python3.14.
