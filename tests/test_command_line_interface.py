@@ -47,6 +47,19 @@ def test_config_update(component: str, tmpdir: LEGACY_PATH) -> None:
         ) == (TEST_SERVER if component == "url" else TEST_TOKEN)
 
 
+def test_config_show() -> None:
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        sv_cli.simvue,
+        [
+            "config",
+            "show"
+        ]
+    )
+    assert result.exit_code == 0, result.output
+
+
+
 def test_runs_list(create_test_run: tuple[simvue.Run, dict]) -> None:
     run, _ = create_test_run
     runner = click.testing.CliRunner()

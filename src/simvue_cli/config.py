@@ -19,7 +19,7 @@ SIMVUE_CONFIG_INI_FILENAME: str = "simvue.ini"
 
 def get_current_configuration() -> tuple[pathlib.Path, dict[str, str]]:
     """Return the current Simvue configuration."""
-    _config: SimvueConfiguration = SimvueConfiguration.fetch()
+    _config: SimvueConfiguration = SimvueConfiguration.fetch(mode="offline")
     return _config.config_file(), _config.model_dump(warnings="none", mode="json")
 
 
