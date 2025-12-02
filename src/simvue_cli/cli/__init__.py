@@ -1209,7 +1209,7 @@ def tag_list(
     if color:
         columns.append("colour")
 
-    if name:
+    if description:
         columns.append("description")
 
     table = create_objects_display(

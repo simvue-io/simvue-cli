@@ -19,7 +19,7 @@ import simvue_cli.actions
     "object", ("runs", "tag", "folders", "users", "tenants", "storages", "artifacts")
 )
 def test_object_list(create_plain_run, object) -> None:
-    assert next(getattr(simvue_cli.actions, f"get_{object}_list")(count=10, sort_by=["created"], reverse=False))
+    assert next(getattr(simvue_cli.actions, f"get_{object}_list")(count=10, sort_by=["created"], reverse=False, filters=None))
 
 
 def test_run_deletion(request) -> None:

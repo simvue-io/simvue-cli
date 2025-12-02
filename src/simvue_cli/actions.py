@@ -357,16 +357,17 @@ def parse_filters(filters: list[str]) -> list[str]:
 
 
 def get_runs_list(
-    sort_by: list[str], reverse: bool, filters: list[str], **kwargs
+    sort_by: list[str], reverse: bool, filters: list[str] | None = None, **kwargs
 ) -> Generator[tuple[str, Run], None, None]:
     """Retrieve list of Simvue runs"""
     _sorting: list[dict[str, str]] = [
         {"column": c, "descending": not reverse} for c in sort_by
     ]
 
-    _filters = parse_filters(filters)
+    if filters:
+        kwargs["filters"] = json.dumps(parse_filters(filters))
 
-    return Run.get(sorting=_sorting, filters=json.dumps(_filters), **kwargs)
+    return Run.get(sorting=_sorting, **kwargs)
 
 
 def get_alerts_list(
@@ -384,14 +385,15 @@ def get_alerts_list(
 
 
 def get_tag_list(
-    sort_by: list[str], reverse: bool, filters: list[str], **kwargs
+    sort_by: list[str], reverse: bool, filters: list[str] | None = None, **kwargs
 ) -> None:
     """Retrieve list of Simvue tags"""
     _sorting: list[dict[str, str]] = [
         {"column": c, "descending": not reverse} for c in sort_by
     ]
-    _filters = parse_filters(filters)
-    return Tag.get(sorting=_sorting, filters=json.dumps(_filters), **kwargs)
+    if filters:
+        kwargs["filters"] = json.dumps(parse_filters(filters))
+    return Tag.get(sorting=_sorting, **kwargs)
 
 
 def get_storages_list(**kwargs) -> typing.Generator[tuple[str, Storage], None, None]:

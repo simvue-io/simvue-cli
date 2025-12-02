@@ -1,4 +1,5 @@
 import contextlib
+import uuid
 import random
 import string
 import typing
@@ -342,8 +343,9 @@ def test_folder_list(create_plain_run: tuple[simvue.Run, dict]) -> None:
 
 
 def test_tag(create_plain_run: tuple[simvue.Run, dict]) -> None:
-    run, run_data = create_plain_run
+    run, _ = create_plain_run
     assert run.id
+    tag_uuid = f"{uuid.uuid4()}".split("-")[0]
     runner = click.testing.CliRunner()
     result = runner.invoke(
         sv_cli.simvue,
@@ -354,7 +356,7 @@ def test_tag(create_plain_run: tuple[simvue.Run, dict]) -> None:
             "cyan",
             "--description",
             "CLI test tag",
-            "simvue_cli_test",
+            f"simvue_cli_test_{tag_uuid}",
         ],
         catch_exceptions=False
     )

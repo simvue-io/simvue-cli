@@ -65,7 +65,7 @@ def set_configuration_option(
 
 def get_url_and_headers() -> tuple[str, dict[str, str]]:
     """Retrieve the Simvue server URL and headers for requests"""
-    _config = SimvueConfiguration.fetch()
+    _config = SimvueConfiguration.fetch(mode="offline")
     _headers: dict[str, str] = {
         "Authorization": f"Bearer {_config.server.token.get_secret_value()}"
     }

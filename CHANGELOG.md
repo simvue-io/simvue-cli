@@ -1,8 +1,10 @@
-# [v1.3.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.3.0) - 2025-12-02
+# [v1.3.1](https://github.com/simvue-io/simvue-cli/releases/tag/v1.3.1) - 2025-12-02
 
 - Added filtering to `simvue run list` command.
 - Added ability to include metadata columns in run list.
 - Added `simvue config show` command.
+
+# ~~[v1.3.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.3.0) - 2025-12-02~~ Broken Release
 
 # [v1.2.2](https://github.com/simvue-io/simvue-cli/releases/tag/v1.2.2) - 2025-10-14
 
