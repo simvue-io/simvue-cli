@@ -9,6 +9,7 @@ the user to submit metrics and retrieve information from the command line.
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
+import os
 import pathlib
 import re
 import sys
@@ -216,8 +217,20 @@ def config_set_token(ctx, token: str) -> None:
 def config_show(ctx) -> None:
     """Show the current Simvue configuration."""
     _config_file, _config = simvue_cli.config.get_current_configuration()
-    click.secho(f"Using configuration from '{_config_file}'.")
+    if _config_file:
+        click.secho(f"Using configuration from '{_config_file}'.\n")
+    if (_url := os.environ.get("SIMVUE_URL")) and (
+        _token := os.environ.get("SIMVUE_TOKEN")
+    ):
+        click.secho("Using environment variables:")
+        click.secho(f" SIMVUE_URL={_url}")
+        click.secho(" SIMVUE_TOKEN=****\n")
+    elif not _config_file:
+        click.secho("No config file found.\n", fg="red", bold=True)
     click.secho(toml.dumps(_config))
+
+    if not _config_file and (not _url or not _token):
+        raise sys.exit(1)
 
 
 @simvue.group("run")
