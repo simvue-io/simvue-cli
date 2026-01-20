@@ -73,11 +73,11 @@ def test_runs_list(create_test_run: tuple[simvue.Run, dict]) -> None:
             "--folder",
             "--metadata.test_engine",
             "--filter",
-            "folder=/simvue_cli_testing",
+            "folder~/simvue_cli_testing",
             "--filter",
             "tag!=fds",
             "--filter",
-            "metadata.random_init>4"
+            "metadata.random_int>4"
         ]
     )
     assert result.exit_code == 0, result.output
