@@ -24,6 +24,7 @@ import logging
 import contextlib
 import importlib.metadata
 
+from simvue.run import FOLDER_REGEX
 import tabulate
 import requests
 import simvue as simvue_client
@@ -36,7 +37,11 @@ import simvue_cli.config
 import simvue_cli.actions
 import simvue_cli.server
 
-from simvue_cli.cli.display import create_objects_display, SIMVUE_LOGO
+from simvue_cli.cli.display import (
+    create_objects_display,
+    SIMVUE_LOGO,
+    format_folder_tree,
+)
 from simvue_cli.validation import (
     SimvueName,
     SimvueFolder,
@@ -1119,21 +1124,65 @@ def folder_list(
 
 @simvue_folder.command("json")
 @click.argument("folder_id", required=False)
-def get_folder_json(folder_id: str) -> None:
+def get_folder_json(folder_id: str | None) -> None:
     """Retrieve folder information from Simvue server
 
-    If no folder_ID is provided the input is read from stdin
+    If no folder_ID is provided the input is read from stdin.
+    Input can be folder unique identifier or name.
     """
     if not folder_id:
         folder_id = input()
 
-    try:
-        folder: Folder = simvue_cli.actions.get_folder(folder_id)
-        folder_info = folder.to_dict()
-        click.echo(json.dumps(dict(folder_info.items()), indent=2))
-    except ObjectNotFoundError as e:
-        error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
-        click.echo(error_msg, fg="red", bold=True)
+    if re.match(FOLDER_REGEX, folder_id):
+        try:
+            folder: Folder = simvue_cli.actions.get_folder_by_path(folder_id)
+        except StopIteration:
+            error_msg: str = f"Failed to retrieve folder '{folder_id}': No such folder."
+            click.secho(error_msg, fg="red", bold=True)
+            return
+    else:
+        try:
+            folder = simvue_cli.actions.get_folder(folder_id)
+        except ObjectNotFoundError as e:
+            error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
+            click.secho(error_msg, fg="red", bold=True)
+            return
+    click.echo(folder.path)
+    folder_info = folder.to_dict()
+    click.echo(json.dumps(dict(folder_info.items()), indent=2))
+
+
+@simvue_folder.command("tree")
+@click.argument("folder_id", required=False)
+@click.option(
+    "-l", "--detail", help="Include folder details", default=False, is_flag=True
+)
+def display_folder_tree(folder_id: str | None, detail: bool) -> None:
+    """Display tree graph of folder structure.
+
+    if no folder_ID is provided the input is read from stdin
+    """
+    if not folder_id:
+        folder_id = input()
+
+    if re.match(FOLDER_REGEX, folder_id):
+        try:
+            folder: Folder = simvue_cli.actions.get_folder_by_path(folder_id)
+        except StopIteration:
+            error_msg: str = f"Failed to retrieve folder '{folder_id}': No such folder."
+            click.secho(error_msg, fg="red", bold=True)
+            return
+    else:
+        try:
+            folder = simvue_cli.actions.get_folder(folder_id)
+        except ObjectNotFoundError as e:
+            error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
+            click.secho(error_msg, fg="red", bold=True)
+            return
+    if detail:
+        _details: dict[str, dict] = simvue_cli.actions.get_folder_details(folder)
+        print(_details)
+    click.echo(format_folder_tree(folder.tree))
 
 
 @simvue.group("tag")
