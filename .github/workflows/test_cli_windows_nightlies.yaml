@@ -26,6 +26,6 @@ jobs:
           SIMVUE_URL: ${{ secrets.SIMVUE_URL }}
           SIMVUE_TOKEN: ${{ secrets.SIMVUE_TOKEN }}
         run: |
-          uv sync --all-groups
+          uv sync --all-groups --python 3.14
           uv run --python 3.14 \
           pytest -x -c /dev/null -p no:warnings -v
