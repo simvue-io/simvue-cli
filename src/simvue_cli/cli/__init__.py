@@ -497,6 +497,7 @@ Examples
     show_default=True,
 )
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
+@click.option("--shared", help="Include shared runs", default=False, is_flag=True)
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 def list_runs(
     ctx,
@@ -510,12 +511,21 @@ def list_runs(
     folder: bool,
     status: bool,
     args: str,
+    shared: bool,
     **kwargs,
 ) -> None:
     """Retrieve runs list from Simvue server"""
     _metadata = [
         arg.replace("--", "") for arg in args if re.findall("^--metadata", arg)
     ]
+
+    # To avoid ambiguity only allow shared to activated by command line argument
+    kwargs["filters"] = [
+        filter for filter in kwargs["filters"] if not filter.startswith("user")
+    ]
+
+    if not shared:
+        kwargs["filters"].append("user == self")
 
     if _metadata:
         kwargs["metadata"] = True
@@ -1150,6 +1160,111 @@ def get_folder_json(folder_id: str | None) -> None:
     click.echo(folder.path)
     folder_info = folder.to_dict()
     click.echo(json.dumps(dict(folder_info.items()), indent=2))
+
+
+@simvue_folder.command("remove")
+@click.pass_context
+@click.argument("folder_ids", type=str, nargs=-1, required=False)
+@click.option(
+    "-i",
+    "--interactive",
+    help="Prompt for confirmation on removal",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@click.option(
+    "-r", "--recurse", help="Recursively remove folders.", default=False, is_flag=True
+)
+@click.option(
+    "-f",
+    "--force",
+    help="Forcefully delete folder even if it contains runs.",
+    is_flag=True,
+    default=False,
+)
+@click.option(
+    "-c",
+    "--content",
+    help="Delete only folder content not folder itself.",
+    is_flag=True,
+    default=False,
+)
+def delete_folder(
+    ctx,
+    folder_ids: list[str] | None,
+    interactive: bool,
+    force: bool,
+    recurse: bool,
+    content: bool,
+) -> None:
+    """Remove a Folder from the Simvue server"""
+    if not folder_ids:
+        folder_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            folder_ids += [k.strip() for k in line.split(" ")]
+
+    force = force if not content else False
+
+    for folder_id in folder_ids:
+        try:
+            _folder = simvue_cli.actions.get_folder(folder_id)
+        except (ObjectNotFoundError, RuntimeError):
+            error_msg = f"Folder '{folder_id}' not found"
+            if ctx.obj["plain"]:
+                print(error_msg)
+            else:
+                click.secho(error_msg, fg="red", bold=True)
+            sys.exit(1)
+
+        if _folder.path == "/":
+            _warn_message: str = "Root directory cannot be deleted."
+            if ctx.obj["plain"]:
+                print(_warn_message)
+            else:
+                click.secho(_warn_message, fg="red", bold=True)
+            sys.exit(1)
+
+        if interactive:
+            remove = click.confirm(
+                f"Remove folder '{folder_id}'" + " and contained runs"
+                if force
+                else "" + "?"
+            )
+            if not remove:
+                continue
+
+        try:
+            simvue_cli.actions.delete_folder(
+                folder_id, force=force, recurse=recurse, contents_only=content
+            )
+        except ValueError as e:
+            click.echo(
+                e.args[0]
+                if ctx.obj["plain"]
+                else click.style(e.args[0], fg="red", bold=True)
+            )
+            sys.exit(1)
+        except RuntimeError as e:
+            if "Folder is in use" in e.args[0]:
+                _out_msg = f"Failed to delete folder '{folder_id}', folder in use."
+            else:
+                _out_msg = e.args[0]
+            click.echo(
+                _out_msg
+                if ctx.obj["plain"]
+                else click.style(_out_msg, fg="red", bold=True)
+            )
+            sys.exit(1)
+
+        response_message = f"Folder '{folder_id}' removed successfully."
+
+        if ctx.obj["plain"]:
+            print(response_message)
+        else:
+            click.secho(response_message, bold=True, fg="green")
 
 
 @simvue_folder.command("tree")

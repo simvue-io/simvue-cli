@@ -920,3 +920,11 @@ def push_json_runs(
     if global_metadata:
         _push_class.global_metadata(global_metadata)
     return _push_class.load(input_file, name=name, folder=folder)
+
+
+def delete_folder(
+    folder_id: str, *, force: bool, recurse: bool, contents_only: bool
+) -> None:
+    Folder(identifier=folder_id).delete(
+        recursive=recurse, delete_runs=force, runs_only=contents_only
+    )
