@@ -36,7 +36,6 @@ keywords = [
 dependencies = [
     "click-option-group>=0.5.7",
     "click>=8.1.8",
-    "click-log>=0.4.0",
     "click-params>=0.5.0",
     "toml>=0.10.2",
     "tabulate>=0.9.0",
@@ -81,6 +80,7 @@ dev = [
     "pytest-cov>=6.0.0",
     "pytest-xdist>=3.8.0",
     "pytest>=8.3.5",
+    "simvue",
 ]
 docs = [
     "renku-sphinx-theme>=0.5.0",
@@ -92,3 +92,6 @@ lint = [
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.uv.sources]
+simvue = { git = "https://github.com/simvue-io/python-api" }

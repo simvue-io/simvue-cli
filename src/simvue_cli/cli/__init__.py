@@ -16,7 +16,7 @@ import shutil
 import click
 import json
 import time
-import click_log
+import os
 import click_option_group
 import datetime
 import logging
@@ -47,25 +47,53 @@ from simvue_cli.validation import (
 
 from click_params import PUBLIC_URL
 
+logging.basicConfig()
 logging.getLogger("simvue").setLevel(logging.ERROR)
-logger = logging.getLogger()
-click_log.basic_config(logger)
+logger = logging.getLogger(__name__)
 
 
 @click.group("simvue-cli")
-@click_log.simple_verbosity_option(logger)
 @click.version_option()
 @click.option(
     "--plain", help="Run without color/formatting", default=False, is_flag=True
 )
+@click.option(
+    "--profile", help="Specify alternative profile for commands.", default=None
+)
+@click.option(
+    "-v", "--verbose", help="Increase verbosity.", default=False, is_flag=True
+)
 @click.pass_context
-def simvue(ctx, plain: bool) -> None:
+def simvue(ctx, plain: bool, profile: str | None, verbose: bool) -> None:
     """Simvue CLI for interacting with a Simvue server instance
 
     Provides functionality for the retrieval, creation and modification of server objects
     """
+    if verbose:
+        logging.getLogger(__name__).setLevel(logging.INFO)
+    _formatting: dict[str, str] = {"bold": True, "fg": "red"} if not plain else {}
+    try:
+        _name, _profile = simvue_cli.config.get_profile(profile)
+    except (ValueError, RuntimeError) as e:
+        click.echo(click.style(f"{e}", **_formatting))
+        raise sys.exit(1)
     ctx.ensure_object(dict)
     ctx.obj["plain"] = plain
+    ctx.obj["profile"] = (_name, _profile)
+
+    if not _profile.url or not _profile.token:
+        click.echo(
+            click.style(
+                f"Failed to retrieve URL and token for server '{profile or 'default'}'",
+                **_formatting,
+            )
+        )
+        raise sys.exit(1)
+
+    logger.info(f"Referencing API server '{_profile.url}'")
+
+    os.environ["SIMVUE_URL"] = f"{_profile.url}"
+    os.environ["SIMVUE_TOKEN"] = _profile.token.get_secret_value()
 
 
 @simvue.command("ping")
@@ -111,12 +139,12 @@ def ping_server(timeout: int | None) -> None:
 
 
 @simvue.command("whoami")
-@click.option("-u", "--user", help="print only the user name", default=False)
-@click.option("-t", "--tenant", help="print only the tenant", default=False)
+@click.option("-u", "--user", help="click.echo only the user name", default=False)
+@click.option("-t", "--tenant", help="click.echo only the tenant", default=False)
 def whoami(user: bool, tenant: bool) -> None:
     """Retrieve current user information"""
     if user and tenant:
-        click.secho("cannot print 'only' with more than one choice")
+        click.secho("cannot click.echo 'only' with more than one choice")
         raise click.Abort
     user_info = simvue_cli.actions.user_info()
     user_name = user_info.get("user")
@@ -215,9 +243,29 @@ def config_set_token(ctx, token: str) -> None:
 @click.pass_context
 def config_show(ctx) -> None:
     """Show the current Simvue configuration."""
+
+    # Remove environment override to show full listing
+    # instead highlight current server
+    del os.environ["SIMVUE_URL"]
+
     _config_file, _config = simvue_cli.config.get_current_configuration()
-    click.secho(f"Using configuration from '{_config_file}'.")
-    click.secho(toml.dumps(_config))
+    logger.info(f"Using configuration from '{_config_file}'.\n")
+    _name, _profile = ctx.obj["profile"]
+    _current_url: str = _profile.url
+    _current_token: str = _profile.token
+    _config_str = toml.dumps(_config)
+
+    if ctx.obj["plain"] and _name:
+        _config_str = _config_str.replace(
+            f"[profiles.{_name}]", f"[profiles.{_name}]  <<< ACTIVE PROFILE"
+        )
+    elif _name:
+        _config_str = _config_str.replace(
+            f"[profiles.{_name}]",
+            click.style(f"[profiles.{_name}]", bold=True, fg="cyan"),
+        )
+
+    click.secho(_config_str)
 
 
 @simvue.group("run")
@@ -302,7 +350,7 @@ def delete_run(ctx, run_ids: list[str] | None, interactive: bool) -> None:
         except (ObjectNotFoundError, RuntimeError):
             error_msg = f"Run '{run_id}' not found"
             if ctx.obj["plain"]:
-                print(error_msg)
+                click.echo(error_msg)
             else:
                 click.secho(error_msg, fg="red", bold=True)
             sys.exit(1)
@@ -325,7 +373,7 @@ def delete_run(ctx, run_ids: list[str] | None, interactive: bool) -> None:
         response_message = f"Run '{run_id}' removed successfully."
 
         if ctx.obj["plain"]:
-            print(response_message)
+            click.echo(response_message)
         else:
             click.secho(response_message, bold=True, fg="green")
 
@@ -338,7 +386,7 @@ def close_run(ctx, run_id: str) -> None:
     if not (simvue_cli.actions.get_run(run_id)):
         error_msg = f"Run '{run_id}' not found"
         if ctx.obj["plain"]:
-            print(error_msg)
+            click.echo(error_msg)
         else:
             click.secho(error_msg, fg="red", bold=True)
         sys.exit(1)
@@ -368,7 +416,7 @@ def abort_run(ctx, run_id: str, reason: str) -> None:
     if not (simvue_cli.actions.get_run(run_id)):
         error_msg = f"Run '{run_id}' not found"
         if ctx.obj["plain"]:
-            print(error_msg)
+            click.echo(error_msg)
         else:
             click.secho(error_msg, fg="red", bold=True)
         sys.exit(1)
@@ -742,7 +790,7 @@ def trigger_alert(ctx, is_ok: bool, **kwargs) -> None:
         )
     except ValueError as e:
         if ctx.obj["plain"]:
-            print(e.args[0])
+            click.echo(e.args[0])
         else:
             click.secho(e.args[0], fg="red", bold=True)
         sys.exit(1)
@@ -899,7 +947,7 @@ def delete_alert(ctx, alert_ids: list[str] | None, interactive: bool) -> None:
         except (ObjectNotFoundError, RuntimeError):
             error_msg = f"alert '{alert_id}' not found"
             if ctx.obj["plain"]:
-                print(error_msg)
+                click.echo(error_msg)
             else:
                 click.secho(error_msg, fg="red", bold=True)
             sys.exit(1)
@@ -922,7 +970,7 @@ def delete_alert(ctx, alert_ids: list[str] | None, interactive: bool) -> None:
         response_message = f"alert '{alert_id}' removed successfully."
 
         if ctx.obj["plain"]:
-            print(response_message)
+            click.echo(response_message)
         else:
             click.secho(response_message, bold=True, fg="green")
 
@@ -1267,7 +1315,7 @@ def delete_tag(ctx, tag_ids: list[str] | None, interactive: bool) -> None:
         except (ObjectNotFoundError, RuntimeError):
             error_msg = f"Tag '{tag_id}' not found"
             if ctx.obj["plain"]:
-                print(error_msg)
+                click.echo(error_msg)
             else:
                 click.secho(error_msg, fg="red", bold=True)
             sys.exit(1)
@@ -1290,7 +1338,7 @@ def delete_tag(ctx, tag_ids: list[str] | None, interactive: bool) -> None:
         response_message = f"Tag '{tag_id}' removed successfully."
 
         if ctx.obj["plain"]:
-            print(response_message)
+            click.echo(response_message)
         else:
             click.secho(response_message, bold=True, fg="green")
 
@@ -1349,7 +1397,7 @@ def get_tenant_json(tenant_id: str) -> None:
 )
 @click.option(
     "--max-data-volume",
-    "-v",
+    "-V",
     default=None,
     type=click.IntRange(min=1, max_open=True),
     help="data storage limit for this tenant",
@@ -1385,7 +1433,7 @@ def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
     if _total_tenants < 2:
         error_msg = "Attempting to delete single remaining tenant on server."
         if ctx.obj["plain"]:
-            print(error_msg)
+            click.echo(error_msg)
         else:
             click.secho(error_msg, fg="red", bold=True)
         sys.exit(1)
@@ -1396,7 +1444,7 @@ def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
         except (ObjectNotFoundError, RuntimeError):
             error_msg = f"tenant '{tenant_id}' not found"
             if ctx.obj["plain"]:
-                print(error_msg)
+                click.echo(error_msg)
             else:
                 click.secho(error_msg, fg="red", bold=True)
             sys.exit(1)
@@ -1419,7 +1467,7 @@ def delete_tenant(ctx, tenant_ids: list[str] | None, interactive: bool) -> None:
         response_message = f"tenant '{tenant_id}' removed successfully."
 
         if ctx.obj["plain"]:
-            print(response_message)
+            click.echo(response_message)
         else:
             click.secho(response_message, bold=True, fg="green")
 
@@ -1673,7 +1721,7 @@ def delete_user(ctx, user_ids: list[str] | None, interactive: bool) -> None:
         except (ObjectNotFoundError, RuntimeError):
             error_msg = f"user '{user_id}' not found"
             if ctx.obj["plain"]:
-                print(error_msg)
+                click.echo(error_msg)
             else:
                 click.secho(error_msg, fg="red", bold=True)
             sys.exit(1)
@@ -1696,7 +1744,7 @@ def delete_user(ctx, user_ids: list[str] | None, interactive: bool) -> None:
         response_message = f"user '{user_id}' removed successfully."
 
         if ctx.obj["plain"]:
-            print(response_message)
+            click.echo(response_message)
         else:
             click.secho(response_message, bold=True, fg="green")
 
@@ -1815,7 +1863,7 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
         except (ObjectNotFoundError, RuntimeError):
             error_msg = f"storage '{storage_id}' not found"
             if ctx.obj["plain"]:
-                print(error_msg)
+                click.echo(error_msg)
             else:
                 click.secho(error_msg, fg="red", bold=True)
             sys.exit(1)
@@ -1838,7 +1886,7 @@ def delete_storage(ctx, storage_ids: list[str] | None, interactive: bool) -> Non
         response_message = f"storage '{storage_id}' removed successfully."
 
         if ctx.obj["plain"]:
-            print(response_message)
+            click.echo(response_message)
         else:
             click.secho(response_message, bold=True, fg="green")
 
@@ -1942,7 +1990,7 @@ def venv_setup(ctx, **kwargs) -> None:
     except (FileExistsError, RuntimeError) as e:
         error_msg = e.args[0]
         if ctx.obj["plain"]:
-            print(error_msg)
+            click.echo(error_msg)
         else:
             click.secho(error_msg, fg="red", bold=True)
         sys.exit(1)
