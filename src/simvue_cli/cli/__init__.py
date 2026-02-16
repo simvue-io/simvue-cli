@@ -23,6 +23,7 @@ import logging
 import contextlib
 import importlib.metadata
 
+from simvue.config.user import pydantic
 import tabulate
 import requests
 import simvue as simvue_client
@@ -207,12 +208,12 @@ def about_simvue(ctx) -> None:
 @simvue.group("config")
 @click.option(
     "--local/--global",
-    default=True,
+    default=None,
     help="Update local or global configurations",
     show_default=True,
 )
 @click.pass_context
-def config(ctx, local: bool) -> None:
+def config(ctx, local: bool | None) -> None:
     """Configure Simvue"""
     ctx.obj["local"] = local
 
@@ -222,8 +223,11 @@ def config(ctx, local: bool) -> None:
 @click.pass_context
 def config_set_url(ctx, url: str) -> None:
     """Update Simvue configuration URL"""
-    out_file: pathlib.Path = simvue_cli.config.set_configuration_option(
-        section="server", key="url", value=url, local=ctx.obj["local"]
+    _profile_name, _ = ctx.obj["profile"]
+    out_file: pathlib.Path = simvue_cli.config.set_profile_option(
+        profile_name=_profile_name,
+        key="url",
+        value=url,
     )
     click.secho(f"Wrote URL value to '{out_file}'")
 
