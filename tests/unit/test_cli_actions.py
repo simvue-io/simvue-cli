@@ -1,6 +1,11 @@
 import contextlib
+import random
+import string
 import tempfile
 import time
+from simvue.config.files import CONFIG_FILE_NAMES
+from simvue.utilities import find_first_instance_of_file
+import toml
 import re
 import pathlib
 import typing
@@ -9,9 +14,11 @@ import uuid
 import os
 import simvue
 from simvue.api.objects import Alert, Folder, Run, Events, Storage, Tenant, User
+from simvue.api.objects.storage.base import SimvueObject
 from simvue.exception import ObjectNotFoundError
-from simvue.run import UserAlert
+from simvue.run import SimvueConfiguration, UserAlert
 import simvue_cli.actions
+import simvue_cli.config
 
 
 
@@ -273,3 +280,33 @@ def test_runs_push(create_runs_json: pathlib.Path) -> None:
     for folder in _folder_ids:
         with contextlib.suppress(Exception):
             Folder(identifier=folder).delete(delete_runs=True, recursive=True)
+
+
+
+@pytest.mark.parametrize(
+    "component,value", [
+        ("url", "https://dummy.simvue.io/api"), 
+        #("token", "".join(random.choice(string.ascii_letters) for _ in range(100)))
+    ],
+    ids=("url",)# "token")
+)
+def test_set_config_options(component: str, value: str) -> None:
+    _current_config_file = find_first_instance_of_file(CONFIG_FILE_NAMES)
+    _current_dir = os.getcwd()
+
+    assert _current_config_file
+    _config = toml.load(_current_config_file)
+    with tempfile.TemporaryDirectory() as tempd:
+        _ = toml.dump(
+            _config,
+                (_new_file := pathlib.Path(tempd).joinpath("simvue.toml")).open("w")
+        )
+        assert _new_file.exists()
+        os.chdir(tempd)
+        _ = simvue_cli.config.set_configuration_option(
+            section="server",
+            key=component,
+            value=value
+        )
+        assert toml.load(_new_file)["server"][component] == value
+    os.chdir(_current_dir)

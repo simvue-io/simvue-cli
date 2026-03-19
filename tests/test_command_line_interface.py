@@ -18,6 +18,7 @@ import pathlib
 
 import click.testing
 import pytest
+from simvue.utilities import find_first_instance_of_file
 import toml
 import json
 import subprocess
@@ -29,11 +30,21 @@ from simvue_cli.config import SIMVUE_CONFIG_FILENAME
 @pytest.mark.parametrize(
     "component", ("url", "token")
 )
-def test_config_update(component: str, tmpdir: LEGACY_PATH) -> None:
-    with tmpdir.as_cwd():
-        TEST_SERVER: str = "https://not-a-simvue.io"
-        TEST_TOKEN: str = "".join(random.choice(string.ascii_letters) for _ in range(100))
-        runner = click.testing.CliRunner()
+def test_config_update(component: str) -> None:
+    TEST_SERVER: str = "https://not-a-simvue.io"
+    TEST_TOKEN: str = "".join(random.choice(string.ascii_letters) for _ in range(100))
+    runner = click.testing.CliRunner()
+
+    _config_file = find_first_instance_of_file(CONFIG_FILE_NAMES)
+
+    assert _config_file
+
+    _orig_config = toml.load(_config_file)
+
+    with runner.isolated_filesystem():
+        with open("simvue.toml", "w") as out_f:
+            _ = toml.dump(_orig_config, out_f)
+
         result = runner.invoke(
             sv_cli.simvue,
             [
@@ -44,7 +55,7 @@ def test_config_update(component: str, tmpdir: LEGACY_PATH) -> None:
         )
         assert result.exit_code == 0, result.output
 
-        config = toml.load(SIMVUE_CONFIG_FILENAME)
+        config = toml.load("simvue.toml")
 
         assert config["server"].get(
             component
