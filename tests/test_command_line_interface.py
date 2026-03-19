@@ -1,4 +1,5 @@
 import contextlib
+import os
 import uuid
 import random
 import string
@@ -7,7 +8,9 @@ from uuid import uuid4
 from _pytest.compat import LEGACY_PATH
 from simvue.api.objects import Alert, Folder, Storage, Tenant, User
 from simvue.client import ObjectNotFoundError, Client
+from simvue.config.files import CONFIG_FILE_NAMES
 from simvue.run import RunObject
+from simvue.config.user import SimvueConfiguration
 import simvue
 import time
 import tempfile
@@ -824,3 +827,48 @@ def test_push_runs(create_runs_json: pathlib.Path) -> None:
 
     if _folder := Client().get_folder(f"/simvue_cli_tests/{_uuid}"):
         _folder.delete(recursive=True, delete_runs=True)
+
+
+def test_use_alternative_profile(create_runs_json: pathlib.Path) -> None:
+    from simvue.utilities import find_first_instance_of_file
+    import toml
+
+    _orig_config = toml.load(find_first_instance_of_file(CONFIG_FILE_NAMES))
+
+    _test_config = {
+        "server": {
+            "url": "https://simvue.example.com",
+            "token": _orig_config["server"]["token"]
+        },
+        "profiles": {
+                "test": _orig_config["server"]
+        }
+    }
+    runner = click.testing.CliRunner()
+
+    with runner.isolated_filesystem():
+        with open("simvue.toml", "w") as out_f:
+            _ = toml.dump(_test_config, out_f)
+        _new_config: SimvueConfiguration = SimvueConfiguration.fetch(mode="offline")
+        result = runner.invoke(
+            sv_cli.simvue,
+            [
+                "config",
+                "show"
+            ],
+            catch_exceptions=False
+        )
+
+        assert "profiles.test" in result.stdout
+
+        result = runner.invoke(
+            sv_cli.simvue,
+            [
+                "--profile=test",
+                "run",
+                "list"
+            ],
+            catch_exceptions=False
+        )
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+
