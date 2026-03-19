@@ -258,7 +258,7 @@ def config_show(ctx) -> None:
     del os.environ["SIMVUE_URL"]
 
     _config_file, _config = simvue_cli.config.get_current_configuration()
-<<<<<<< HEAD
+
     logger.info(f"Using configuration from '{_config_file}'.\n")
     _name, _profile = ctx.obj["profile"]
     _current_url: str = _profile.url
@@ -276,21 +276,22 @@ def config_show(ctx) -> None:
         )
 
     click.secho(_config_str)
-=======
+
     if _config_file:
         click.secho(f"Using configuration from '{_config_file}'.\n")
-    if (_url := os.environ.get("SIMVUE_URL")) and (
-        _token := os.environ.get("SIMVUE_TOKEN")
+    if (_env_url := os.environ.get("SIMVUE_URL")) and (
+        _env_token := os.environ.get("SIMVUE_TOKEN")
     ):
         click.secho("Using environment variables:")
-        click.secho(f" SIMVUE_URL={_url}")
+        click.secho(f" SIMVUE_URL={_env_url}")
         click.secho(" SIMVUE_TOKEN=****\n")
+        _current_url = _env_url
+        _current_token = _env_token
     elif not _config_file:
         click.secho("No config file found.\n", fg="red", bold=True)
     click.secho(toml.dumps(_config))
->>>>>>> dev
 
-    if not _config_file and (not _url or not _token):
+    if not _config_file and (not _current_url or not _current_token):
         raise sys.exit(1)
 
 
