@@ -226,3 +226,30 @@ def create_objects_display(
         return "\n".join(objs_list)
 
     return tabulate.tabulate(contents, headers=table_headers, tablefmt=format).__str__()
+
+
+def format_folder_tree(
+    folder_tree: dict[str, dict[str, typing.Any]],
+    *,
+    _prefix: str = "",
+    color: bool = True,
+) -> str:
+    """Recursively print a directory tree from a nested dictionary."""
+    entries = list(folder_tree.keys())
+    last_index = len(entries) - 1
+    out_str: str = ""
+    print_args: dict[str, str] = {}
+    if color:
+        print_args |= {"fg": "blue"}
+
+    for i, name in enumerate(entries):
+        is_last = i == last_index
+        connector = "└── " if is_last else "├── "
+
+        out_str += f"{_prefix}{connector}{click.style(name, **print_args)}\n"
+
+        # If the value is a nested dictionary, recurse
+        if isinstance(folder_tree[name], dict) and folder_tree[name]:
+            new_prefix = f"{_prefix}{'    ' if is_last else '│   '}"
+            out_str += format_folder_tree(folder_tree[name], _prefix=new_prefix)
+    return out_str

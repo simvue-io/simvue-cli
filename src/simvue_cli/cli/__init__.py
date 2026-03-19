@@ -9,6 +9,7 @@ the user to submit metrics and retrieve information from the command line.
 __author__ = "Kristian Zarebski"
 __date__ = "2024-09-09"
 
+import os
 import pathlib
 import re
 import sys
@@ -23,7 +24,7 @@ import logging
 import contextlib
 import importlib.metadata
 
-from simvue.config.user import pydantic
+from simvue.run import FOLDER_REGEX
 import tabulate
 import requests
 import simvue as simvue_client
@@ -36,7 +37,11 @@ import simvue_cli.config
 import simvue_cli.actions
 import simvue_cli.server
 
-from simvue_cli.cli.display import create_objects_display, SIMVUE_LOGO
+from simvue_cli.cli.display import (
+    create_objects_display,
+    SIMVUE_LOGO,
+    format_folder_tree,
+)
 from simvue_cli.validation import (
     SimvueName,
     SimvueFolder,
@@ -253,6 +258,7 @@ def config_show(ctx) -> None:
     del os.environ["SIMVUE_URL"]
 
     _config_file, _config = simvue_cli.config.get_current_configuration()
+<<<<<<< HEAD
     logger.info(f"Using configuration from '{_config_file}'.\n")
     _name, _profile = ctx.obj["profile"]
     _current_url: str = _profile.url
@@ -270,6 +276,22 @@ def config_show(ctx) -> None:
         )
 
     click.secho(_config_str)
+=======
+    if _config_file:
+        click.secho(f"Using configuration from '{_config_file}'.\n")
+    if (_url := os.environ.get("SIMVUE_URL")) and (
+        _token := os.environ.get("SIMVUE_TOKEN")
+    ):
+        click.secho("Using environment variables:")
+        click.secho(f" SIMVUE_URL={_url}")
+        click.secho(" SIMVUE_TOKEN=****\n")
+    elif not _config_file:
+        click.secho("No config file found.\n", fg="red", bold=True)
+    click.secho(toml.dumps(_config))
+>>>>>>> dev
+
+    if not _config_file and (not _url or not _token):
+        raise sys.exit(1)
 
 
 @simvue.group("run")
@@ -531,6 +553,7 @@ Examples
     show_default=True,
 )
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
+@click.option("--shared", help="Include shared runs", default=False, is_flag=True)
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 def list_runs(
     ctx,
@@ -544,12 +567,21 @@ def list_runs(
     folder: bool,
     status: bool,
     args: str,
+    shared: bool,
     **kwargs,
 ) -> None:
     """Retrieve runs list from Simvue server"""
     _metadata = [
         arg.replace("--", "") for arg in args if re.findall("^--metadata", arg)
     ]
+
+    # To avoid ambiguity only allow shared to activated by command line argument
+    kwargs["filters"] = [
+        filter for filter in kwargs["filters"] if not filter.startswith("user")
+    ]
+
+    if not shared:
+        kwargs["filters"].append("user == self")
 
     if _metadata:
         kwargs["metadata"] = True
@@ -1158,21 +1190,170 @@ def folder_list(
 
 @simvue_folder.command("json")
 @click.argument("folder_id", required=False)
-def get_folder_json(folder_id: str) -> None:
+def get_folder_json(folder_id: str | None) -> None:
     """Retrieve folder information from Simvue server
 
-    If no folder_ID is provided the input is read from stdin
+    If no folder_ID is provided the input is read from stdin.
+    Input can be folder unique identifier or name.
     """
     if not folder_id:
         folder_id = input()
 
-    try:
-        folder: Folder = simvue_cli.actions.get_folder(folder_id)
-        folder_info = folder.to_dict()
-        click.echo(json.dumps(dict(folder_info.items()), indent=2))
-    except ObjectNotFoundError as e:
-        error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
-        click.echo(error_msg, fg="red", bold=True)
+    if re.match(FOLDER_REGEX, folder_id):
+        try:
+            folder: Folder = simvue_cli.actions.get_folder_by_path(folder_id)
+        except StopIteration:
+            error_msg: str = f"Failed to retrieve folder '{folder_id}': No such folder."
+            click.secho(error_msg, fg="red", bold=True)
+            return
+    else:
+        try:
+            folder = simvue_cli.actions.get_folder(folder_id)
+        except ObjectNotFoundError as e:
+            error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
+            click.secho(error_msg, fg="red", bold=True)
+            return
+    click.echo(folder.path)
+    folder_info = folder.to_dict()
+    click.echo(json.dumps(dict(folder_info.items()), indent=2))
+
+
+@simvue_folder.command("remove")
+@click.pass_context
+@click.argument("folder_ids", type=str, nargs=-1, required=False)
+@click.option(
+    "-i",
+    "--interactive",
+    help="Prompt for confirmation on removal",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@click.option(
+    "-r", "--recurse", help="Recursively remove folders.", default=False, is_flag=True
+)
+@click.option(
+    "-f",
+    "--force",
+    help="Forcefully delete folder even if it contains runs.",
+    is_flag=True,
+    default=False,
+)
+@click.option(
+    "-c",
+    "--content",
+    help="Delete only folder content not folder itself.",
+    is_flag=True,
+    default=False,
+)
+def delete_folder(
+    ctx,
+    folder_ids: list[str] | None,
+    interactive: bool,
+    force: bool,
+    recurse: bool,
+    content: bool,
+) -> None:
+    """Remove a Folder from the Simvue server"""
+    if not folder_ids:
+        folder_ids = []
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            folder_ids += [k.strip() for k in line.split(" ")]
+
+    force = force if not content else False
+
+    for folder_id in folder_ids:
+        try:
+            _folder = simvue_cli.actions.get_folder(folder_id)
+        except (ObjectNotFoundError, RuntimeError):
+            error_msg = f"Folder '{folder_id}' not found"
+            if ctx.obj["plain"]:
+                print(error_msg)
+            else:
+                click.secho(error_msg, fg="red", bold=True)
+            sys.exit(1)
+
+        if _folder.path == "/":
+            _warn_message: str = "Root directory cannot be deleted."
+            if ctx.obj["plain"]:
+                print(_warn_message)
+            else:
+                click.secho(_warn_message, fg="red", bold=True)
+            sys.exit(1)
+
+        if interactive:
+            remove = click.confirm(
+                f"Remove folder '{folder_id}'" + " and contained runs"
+                if force
+                else "" + "?"
+            )
+            if not remove:
+                continue
+
+        try:
+            simvue_cli.actions.delete_folder(
+                folder_id, force=force, recurse=recurse, contents_only=content
+            )
+        except ValueError as e:
+            click.echo(
+                e.args[0]
+                if ctx.obj["plain"]
+                else click.style(e.args[0], fg="red", bold=True)
+            )
+            sys.exit(1)
+        except RuntimeError as e:
+            if "Folder is in use" in e.args[0]:
+                _out_msg = f"Failed to delete folder '{folder_id}', folder in use."
+            else:
+                _out_msg = e.args[0]
+            click.echo(
+                _out_msg
+                if ctx.obj["plain"]
+                else click.style(_out_msg, fg="red", bold=True)
+            )
+            sys.exit(1)
+
+        response_message = f"Folder '{folder_id}' removed successfully."
+
+        if ctx.obj["plain"]:
+            print(response_message)
+        else:
+            click.secho(response_message, bold=True, fg="green")
+
+
+@simvue_folder.command("tree")
+@click.argument("folder_id", required=False)
+@click.option(
+    "-l", "--detail", help="Include folder details", default=False, is_flag=True
+)
+def display_folder_tree(folder_id: str | None, detail: bool) -> None:
+    """Display tree graph of folder structure.
+
+    if no folder_ID is provided the input is read from stdin
+    """
+    if not folder_id:
+        folder_id = input()
+
+    if re.match(FOLDER_REGEX, folder_id):
+        try:
+            folder: Folder = simvue_cli.actions.get_folder_by_path(folder_id)
+        except StopIteration:
+            error_msg: str = f"Failed to retrieve folder '{folder_id}': No such folder."
+            click.secho(error_msg, fg="red", bold=True)
+            return
+    else:
+        try:
+            folder = simvue_cli.actions.get_folder(folder_id)
+        except ObjectNotFoundError as e:
+            error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
+            click.secho(error_msg, fg="red", bold=True)
+            return
+    if detail:
+        _details: dict[str, dict] = simvue_cli.actions.get_folder_details(folder)
+        print(_details)
+    click.echo(format_folder_tree(folder.tree))
 
 
 @simvue.group("tag")

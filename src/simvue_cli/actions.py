@@ -664,6 +664,21 @@ def get_folder(folder_id: str) -> Folder:
     return Folder(identifier=folder_id)
 
 
+def get_folder_by_path(folder_path: str) -> Folder:
+    """Retrieve a folder by path."""
+    _, folder = next(
+        Folder.get(count=1, filters=json.dumps([f"path == {folder_path}"]))
+    )
+    return folder
+
+
+def get_folder_details(folder_path: str) -> dict[str, dict]:
+    _folders: Generator[tuple[str, Folder]] = Folder.get(
+        filters=json.dumps([f"path contains {folder_path}"])
+    )
+    return {folder.path: folder.to_dict() for _, folder in _folders}
+
+
 def get_alert(alert_id: str) -> Alert:
     """Retrieve a alert from the server"""
     return Alert(identifier=alert_id)
@@ -905,3 +920,11 @@ def push_json_runs(
     if global_metadata:
         _push_class.global_metadata(global_metadata)
     return _push_class.load(input_file, name=name, folder=folder)
+
+
+def delete_folder(
+    folder_id: str, *, force: bool, recurse: bool, contents_only: bool
+) -> None:
+    Folder(identifier=folder_id).delete(
+        recursive=recurse, delete_runs=force, runs_only=contents_only
+    )
