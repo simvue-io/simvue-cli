@@ -26,6 +26,7 @@ import simvue_cli.config
     "object", ("runs", "tag", "folders", "users", "tenants", "storages", "artifacts")
 )
 def test_object_list(create_plain_run, object) -> None:
+    _ = create_plain_run
     assert next(getattr(simvue_cli.actions, f"get_{object}_list")(count=10, sort_by=["created"], reverse=False, filters=None))
 
 
@@ -286,9 +287,9 @@ def test_runs_push(create_runs_json: pathlib.Path) -> None:
 @pytest.mark.parametrize(
     "component,value", [
         ("url", "https://dummy.simvue.io/api"), 
-        #("token", "".join(random.choice(string.ascii_letters) for _ in range(100)))
+        ("token", "".join(random.choice(string.ascii_letters) for _ in range(100)))
     ],
-    ids=("url",)# "token")
+    ids=("url", "token")
 )
 def test_set_config_options(component: str, value: str) -> None:
     _current_config_file = find_first_instance_of_file(CONFIG_FILE_NAMES)
@@ -297,16 +298,68 @@ def test_set_config_options(component: str, value: str) -> None:
     assert _current_config_file
     _config = toml.load(_current_config_file)
     with tempfile.TemporaryDirectory() as tempd:
+        os.chdir(tempd)
         _ = toml.dump(
             _config,
                 (_new_file := pathlib.Path(tempd).joinpath("simvue.toml")).open("w")
         )
         assert _new_file.exists()
-        os.chdir(tempd)
         _ = simvue_cli.config.set_configuration_option(
             section="server",
             key=component,
-            value=value
+            value=value,
+            targets="project"
         )
+        os.chdir(_current_dir)
         assert toml.load(_new_file)["server"][component] == value
-    os.chdir(_current_dir)
+
+
+def test_download_duplicate_file(request) -> None:
+    """Test download of duplicate files in a run."""
+
+    with simvue.Run() as run:
+        _test_name: str = request.node.name.replace("[", "_").replace("]", "")
+        _ = run.init(
+            name=_test_name,
+            visibility="tenant" if os.environ.get("CI") else None,
+            retention_period="5 minutes",
+            timeout=15,
+            no_color=True
+        )
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp_f:
+            for _ in range(2):
+                with pathlib.Path(temp_f.name).open("w") as out_f:
+                    _ = out_f.write("Hello World!")
+                run.save_file(
+                    file_path=temp_f.name,
+                    category="output",
+                )
+                time.sleep(1)
+        pathlib.Path(temp_f.name).unlink()
+    with tempfile.TemporaryDirectory() as tempd:
+        _output = simvue_cli.actions.pull_run(run.id, output_dir=pathlib.Path(tempd))
+        assert _output
+        _file_name = pathlib.Path(temp_f.name).stem
+        assert len([i for i in _output if _file_name in i.name]) > 1, f"{_file_name} not in {_output} above once"
+
+
+def test_purge_local_files(monkeypatch) -> None:
+    """Test purge of user home area Simvue files."""
+    with tempfile.TemporaryDirectory() as tempd:
+        monkeypatch.setattr(pathlib.Path, "home", lambda *_, **__: pathlib.Path(tempd))
+
+        # Sanity check
+        assert pathlib.Path.home() == (_test_dir := pathlib.Path(tempd))
+
+        _created_files: list[pathlib.Path] = []
+
+        (_offline_cache := _test_dir.joinpath(".simvue")).mkdir()
+        (_offline_data := _test_dir.joinpath(".simvue", "test_json.json")).touch()
+        (_global_config := _test_dir.joinpath(".simvue.toml")).touch()
+
+        _deleted_files = simvue_cli.actions.purge_local_simvue_files()
+
+        assert _offline_cache in _deleted_files
+        assert _offline_cache in _deleted_files
+        assert _global_config in _deleted_files
+

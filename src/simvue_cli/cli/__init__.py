@@ -17,7 +17,6 @@ import shutil
 import click
 import json
 import time
-import os
 import click_option_group
 import datetime
 import logging
@@ -77,14 +76,29 @@ def simvue(ctx, plain: bool, profile: str | None, verbose: bool) -> None:
     """
     if verbose:
         logging.getLogger(__name__).setLevel(logging.INFO)
-    _formatting: dict[str, str] = {"bold": True, "fg": "red"} if not plain else {}
+
+    _formatting: dict[str, str | bool] = (
+        {"bold": True, "fg": "red"} if not plain else {}
+    )
+
+    ctx.ensure_object(dict)
+    ctx.obj["plain"] = plain
+    ctx.obj["profile"] = (None, None)
+
+    # A lot of commands should not use profile
+    # and so should not be affected by this
+    if not profile:
+        return
+
     try:
         _name, _profile = simvue_cli.config.get_profile(profile)
     except (ValueError, RuntimeError) as e:
         click.echo(click.style(f"{e}", **_formatting))
         raise sys.exit(1)
-    ctx.ensure_object(dict)
-    ctx.obj["plain"] = plain
+    except FileNotFoundError:
+        # No config files found so nothing to be done
+        return
+
     ctx.obj["profile"] = (_name, _profile)
 
     if not _profile.url or not _profile.token:
@@ -212,15 +226,19 @@ def about_simvue(ctx) -> None:
 
 @simvue.group("config")
 @click.option(
-    "--local/--global",
+    "_global",
+    "--global/--all",
     default=None,
-    help="Update local or global configurations",
+    help="Update global or all configurations. Default of None will update local configuration only.",
     show_default=True,
 )
 @click.pass_context
-def config(ctx, local: bool | None) -> None:
+def config(ctx, _global: bool | None) -> None:
     """Configure Simvue"""
-    ctx.obj["local"] = local
+    if _global is not None:
+        ctx.obj["config_locations"] = "global" if _global else "all"
+    else:
+        ctx.obj["config_locations"] = "project"
 
 
 @config.command("server.url")
@@ -229,12 +247,14 @@ def config(ctx, local: bool | None) -> None:
 def config_set_url(ctx, url: str) -> None:
     """Update Simvue configuration URL"""
     _profile_name, _ = ctx.obj["profile"]
-    out_file: pathlib.Path = simvue_cli.config.set_profile_option(
-        profile_name=_profile_name,
-        key="url",
-        value=url,
+    _target_locations = ctx.obj["config_locations"]
+    _out_files: list[pathlib.Path] = simvue_cli.config.set_profile_option(
+        profile_name=_profile_name, key="url", value=url, targets=_target_locations
     )
-    click.secho(f"Wrote URL value to '{out_file}'")
+    for out_file in _out_files:
+        click.secho(f"Wrote URL value to '{out_file}'")
+    if not _out_files:
+        sys.exit(1)
 
 
 @config.command("server.token")
@@ -242,10 +262,13 @@ def config_set_url(ctx, url: str) -> None:
 @click.pass_context
 def config_set_token(ctx, token: str) -> None:
     """Update Simvue configuration Token"""
-    out_file: pathlib.Path = simvue_cli.config.set_configuration_option(
-        section="server", key="token", value=token, local=ctx.obj["local"]
+    _profile_name, _ = ctx.obj["profile"]
+    _target_locations = ctx.obj["config_locations"]
+    _out_files: list[pathlib.Path] = simvue_cli.config.set_profile_option(
+        profile_name=_profile_name, key="token", value=token, targets=_target_locations
     )
-    click.secho(f"Wrote token value to '{out_file}'")
+    for out_file in _out_files:
+        click.secho(f"Wrote token value to '{out_file}'")
 
 
 @config.command("show")
@@ -255,33 +278,38 @@ def config_show(ctx) -> None:
 
     # Remove environment override to show full listing
     # instead highlight current server
-    del os.environ["SIMVUE_URL"]
+    _env_url = os.environ.pop("SIMVUE_URL", None)
+    _env_token = os.environ.pop("SIMVUE_TOKEN", None)
 
     _config_file, _config = simvue_cli.config.get_current_configuration()
+    _current_url: str | None = None
+    _current_token: str | None = None
 
     logger.info(f"Using configuration from '{_config_file}'.\n")
+
     _name, _profile = ctx.obj["profile"]
-    _current_url: str = _profile.url
-    _current_token: str = _profile.token
-    _config_str = toml.dumps(_config)
 
-    if ctx.obj["plain"] and _name:
-        _config_str = _config_str.replace(
-            f"[profiles.{_name}]", f"[profiles.{_name}]  <<< ACTIVE PROFILE"
-        )
-    elif _name:
-        _config_str = _config_str.replace(
-            f"[profiles.{_name}]",
-            click.style(f"[profiles.{_name}]", bold=True, fg="cyan"),
-        )
+    if _profile:
+        _current_url = _profile.url
+        _current_token = _profile.token
+        _config_str = toml.dumps(_config)
 
-    click.secho(_config_str)
+        if ctx.obj["plain"] and _name:
+            _config_str = _config_str.replace(
+                f"[profiles.{_name}]", f"[profiles.{_name}]  <<< ACTIVE PROFILE"
+            )
+        elif _name:
+            _config_str = _config_str.replace(
+                f"[profiles.{_name}]",
+                click.style(f"[profiles.{_name}]", bold=True, fg="cyan"),
+            )
+
+        click.secho(_config_str)
+        return
 
     if _config_file:
         click.secho(f"Using configuration from '{_config_file}'.\n")
-    if (_env_url := os.environ.get("SIMVUE_URL")) and (
-        _env_token := os.environ.get("SIMVUE_TOKEN")
-    ):
+    if _env_url and _env_token:
         click.secho("Using environment variables:")
         click.secho(f" SIMVUE_URL={_env_url}")
         click.secho(" SIMVUE_TOKEN=****\n")
@@ -297,7 +325,7 @@ def config_show(ctx) -> None:
 
 @simvue.group("run")
 @click.pass_context
-def simvue_run(ctx) -> None:
+def simvue_run(_) -> None:
     """Create or retrieve Simvue runs"""
     pass
 
@@ -555,6 +583,7 @@ Examples
 )
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 @click.option("--shared", help="Include shared runs", default=False, is_flag=True)
+@click.option("--starred", help="Filter to favorited runs", default=False, is_flag=True)
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 def list_runs(
     ctx,
@@ -569,6 +598,7 @@ def list_runs(
     status: bool,
     args: str,
     shared: bool,
+    starred: bool,
     **kwargs,
 ) -> None:
     """Retrieve runs list from Simvue server"""
@@ -583,6 +613,9 @@ def list_runs(
 
     if not shared:
         kwargs["filters"].append("user == self")
+
+    if starred:
+        kwargs["filters"].append("starred")
 
     if _metadata:
         kwargs["metadata"] = True
@@ -615,8 +648,9 @@ def list_runs(
 
 
 @simvue_run.command("json")
+@click.pass_context
 @click.argument("run_id", required=False)
-def get_run_json(run_id: str) -> None:
+def get_run_json(ctx, run_id: str) -> None:
     """Retrieve Run information from Simvue server
 
     If no RUN_ID is provided the input is read from stdin
@@ -630,7 +664,9 @@ def get_run_json(run_id: str) -> None:
         click.echo(json.dumps(dict(run_info.items()), indent=2))
     except ObjectNotFoundError as e:
         error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
-        click.echo(error_msg, fg="red", bold=True)
+        if not ctx.obj["plain"]:
+            error_msg = click.style(error_msg, fg="red", bold=True)
+        click.echo(error_msg)
         sys.exit(1)
 
 
@@ -706,10 +742,11 @@ def get_run_artifacts(
             raise SystemExit
     except SystemExit:
         sys.exit(1)
-    except RuntimeError as e:
-        click.secho(
-            f"Failed to retrieve run '{run_id}': {e.args[0]}", fg="red", bold=True
-        )
+    except (ObjectNotFoundError, RuntimeError) as e:
+        _error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
+        if not ctx.obj["plain"]:
+            _error_msg = click.style(_error_msg, fg="red", bold=True)
+        click.echo(_error_msg)
         sys.exit(1)
 
     columns = ["id"]
@@ -767,6 +804,7 @@ def pull_simvue_run(ctx, output_dir: str, run_id: str) -> None:
             plain=ctx.obj["plain"],
         )
         if not _downloaded_files:
+            click.echo("No artifacts found.")
             return
         _disp_str = "\n".join(f"{file}" for file in _downloaded_files)
         click.echo(_disp_str if ctx.obj["plain"] else click.style(_disp_str, bold=True))
@@ -782,28 +820,19 @@ def pull_simvue_run(ctx, output_dir: str, run_id: str) -> None:
 
 @simvue.command("purge")
 @click.pass_context
-def purge_simvue(ctx) -> None:
-    """Remove all local Simvue files"""
-    local_files_exist: bool = False
-    if (user_simvue_directory := pathlib.Path().home().joinpath(".simvue")).exists():
-        click.echo(f"Removing '{user_simvue_directory}'")
-        shutil.rmtree(user_simvue_directory)
-        local_files_exist = True
-    if (global_simvue_file := pathlib.Path().home().joinpath(".simvue.toml")).exists():
-        click.echo(f"Removing global Simvue configuration '{global_simvue_file}'")
-        global_simvue_file.unlink()
-        local_files_exist = True
+def purge_simvue(_) -> None:
+    """Remove all local Simvue files in user home area."""
 
     click.echo(
         "Simvue user files deleted successfully."
-        if local_files_exist
+        if simvue_cli.actions.purge_local_simvue_files()
         else "Nothing to do."
     )
 
 
 @simvue.group("alert")
 @click.pass_context
-def simvue_alert(ctx) -> None:
+def simvue_alert(_) -> None:
     """Create and list Simvue alerts"""
     pass
 
@@ -1162,7 +1191,6 @@ def folder_list(
     **kwargs,
 ) -> None:
     """Retrieve folders list from Simvue server"""
-    kwargs |= {"filters": kwargs.get("filters" or [])}
     folders = simvue_cli.actions.get_folders_list(**kwargs)
     if not folders:
         return
@@ -2306,26 +2334,6 @@ def artifact_list(
         format=table_format,
     )
     click.echo(table)
-
-
-@simvue_artifact.command("json")
-@click.pass_context
-@click.argument("artifact_id", required=False)
-def get_artifact_json(ctx, artifact_id: str) -> None:
-    """Retrieve artifact information from Simvue server
-
-    If no ARTIFACT_ID is provided the input is read from stdin
-    """
-    if not artifact_id:
-        artifact_id = input()
-
-    try:
-        artifact: Artifact = simvue_cli.actions.get_artifact(artifact_id)
-        artifact_info = artifact.to_dict()
-        click.echo(json.dumps(dict(artifact_info.items()), indent=2))
-    except ObjectNotFoundError as e:
-        error_msg = f"Failed to retrieve artifact '{artifact_id}': {e.args[0]}"
-        click.echo(error_msg, fg="red", bold=True)
 
 
 @simvue.group("push")

@@ -13,6 +13,8 @@ import pathlib
 import json
 import re
 import sys
+from simvue.api.objects.alert.fetch import AlertType
+from simvue.api.objects.storage.file import FileStorage
 import tqdm
 import typing
 import time
@@ -37,6 +39,7 @@ from simvue.api.objects import (
     Alert,
     Artifact,
     EventsAlert,
+    FileArtifact,
     MetricsRangeAlert,
     MetricsThresholdAlert,
     Run,
@@ -358,7 +361,7 @@ def parse_filters(filters: list[str]) -> list[str]:
 
 def get_runs_list(
     sort_by: list[str], reverse: bool, filters: list[str] | None = None, **kwargs
-) -> Generator[tuple[str, Run], None, None]:
+) -> Generator[tuple[str, Run]]:
     """Retrieve list of Simvue runs"""
     _sorting: list[dict[str, str]] = [
         {"column": c, "descending": not reverse} for c in sort_by
@@ -436,15 +439,15 @@ def get_artifact(artifact_id: str) -> Artifact:
     return Artifact(identifier=artifact_id, read_only=True)
 
 
-def get_run(run_id: str) -> Run:
+def get_run(run_id: str) -> Run | None:
     """Retrieve a Run from the Simvue server"""
     return Run(identifier=run_id, read_only=True)
 
 
 def delete_run(run_id: str) -> None:
     """Delete a given run from the Simvue server"""
-    _run = get_run(run_id)
-    _run.delete()
+    if _run := get_run(run_id):
+        _run.delete()
 
 
 def delete_tag(tag_id: str) -> None:
@@ -679,7 +682,7 @@ def get_folder_details(folder_path: str) -> dict[str, dict]:
     return {folder.path: folder.to_dict() for _, folder in _folders}
 
 
-def get_alert(alert_id: str) -> Alert:
+def get_alert(alert_id: str) -> AlertType:
     """Retrieve a alert from the server"""
     return Alert(identifier=alert_id)
 
@@ -689,7 +692,7 @@ def get_tag(tag_id: str) -> Tag:
     return Tag(identifier=tag_id)
 
 
-def get_storage(storage_id: str) -> Storage:
+def get_storage(storage_id: str) -> S3Storage | FileStorage:
     """Retrieve a storage from the server"""
     return Storage(identifier=storage_id)
 
@@ -699,14 +702,9 @@ def get_user(user_id: str) -> User:
     return User(identifier=user_id)
 
 
-def get_artifact(artifact_id: str) -> Tag:
-    """Retrieve an artifact from the server"""
-    return Artifact(identifier=artifact_id)
-
-
 def delete_tenant(tenant_id: str) -> None:
     """Delete a given tenant from the Simvue server"""
-    _tenant = get_tenant(tenant_id)
+    _tenant: Tenant = get_tenant(tenant_id)
     _tenant.delete()
 
 
@@ -795,21 +793,19 @@ def create_environment(
 
 def get_run_artifacts(
     run_id: str,
-) -> typing.Generator[tuple[str, Artifact], None, None]:
+) -> Generator[tuple[str, FileArtifact]]:
     """Retrieve Artifacts for a given run."""
-    try:
-        run: Run = get_run(run_id)
-    except ObjectNotFoundError as e:
-        error_msg = f"Failed to retrieve run '{run_id}': {e.args[0]}"
-        click.echo(error_msg, fg="red", bold=True)
-        raise StopIteration
+    run: Run = get_run(run_id)
 
     for artifact in run.artifacts:
-        yield artifact["id"], Artifact(**artifact, read_only=True)
+        yield artifact["id"], FileArtifact(**artifact, read_only=True)
 
 
 def pull_run(
-    run_id: str, *, output_dir: pathlib.Path, plain: bool = False
+    run_id: str,
+    *,
+    output_dir: pathlib.Path,
+    plain: bool = False,
 ) -> list[pathlib.Path] | None:
     """Pull contents of a Simvue run locally.
 
@@ -834,6 +830,8 @@ def pull_run(
     RuntimeError
         if run does not exist
     """
+    _run: Run | None
+
     if not (_run := get_run(run_id)):
         raise RuntimeError(f"Run '{run_id}' not found.")
 
@@ -843,7 +841,6 @@ def pull_run(
     _artifacts = get_run_artifacts(run_id)
 
     if not _artifacts or len(_list_art := list(_artifacts)) == 0:
-        click.echo("No artifacts found.")
         return None
 
     _iter = _list_art if plain else tqdm.tqdm(_list_art, unit="file", colour="blue")
@@ -852,13 +849,31 @@ def pull_run(
         exist_ok=True, parents=True
     )
 
-    for _, artifact in _iter:
-        _client.get_artifact_as_file(
-            run_id=run_id, name=artifact.name, output_dir=_out_dir
-        )
-        if not (_out_file := _out_dir.joinpath(artifact.name)).exists():
-            raise RuntimeError(f"Download of file '{_out_file}' failed.")
-        _output.append(output_dir.joinpath(artifact.name))
+    # Handle duplicate files
+    _downloaded: dict[pathlib.Path, int] = {}
+
+    for _id, artifact in _iter:
+        _name_path = pathlib.Path(artifact.name or _id)
+        _count = _downloaded.setdefault(_name_path, 0)
+
+        # Increase count if this file is a duplicate
+        if _count > 0:
+            _suffix: str = _name_path.suffix
+            _name_path = pathlib.Path(_name_path.parent).joinpath(_name_path.stem)
+            _name_path = pathlib.Path(f"{_name_path}_{_count}{_suffix}")
+
+        _count += 1
+        _downloaded[_name_path] = _count
+
+        # If name is itself a file address create subdirectories also
+        _file_name = _out_dir.joinpath(_name_path)
+        _file_name.parent.mkdir(exist_ok=True, parents=True)
+
+        with _file_name.open("wb") as out_f:
+            for content in artifact.download_content():
+                _ = out_f.write(content)
+
+        _output.append(_file_name)
     return _output
 
 
@@ -925,6 +940,23 @@ def push_json_runs(
 def delete_folder(
     folder_id: str, *, force: bool, recurse: bool, contents_only: bool
 ) -> None:
-    Folder(identifier=folder_id).delete(
+    """Delete a folder from the server."""
+    _ = Folder(identifier=folder_id).delete(
         recursive=recurse, delete_runs=force, runs_only=contents_only
     )
+
+
+def purge_local_simvue_files() -> list[pathlib.Path]:
+    """Remove local Simvue files, does not include project level config."""
+    _remove_files: list[pathlib.Path] = []
+
+    if (user_simvue_directory := pathlib.Path().home().joinpath(".simvue")).exists():
+        click.echo(f"Removing '{user_simvue_directory}'")
+        shutil.rmtree(user_simvue_directory)
+        _remove_files.append(user_simvue_directory)
+    if (global_simvue_file := pathlib.Path().home().joinpath(".simvue.toml")).exists():
+        click.echo(f"Removing global Simvue configuration '{global_simvue_file}'")
+        global_simvue_file.unlink()
+        _remove_files.append(global_simvue_file)
+
+    return _remove_files

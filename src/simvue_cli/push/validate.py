@@ -1,7 +1,6 @@
 """Validation for CLI inputs."""
 
 import contextlib
-from csv import DictReader
 from typing import Annotated
 import pydantic
 

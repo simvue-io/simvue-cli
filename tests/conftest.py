@@ -11,7 +11,14 @@ import faker
 import json
 import typing
 
+from simvue.config.user import SimvueConfiguration
+
 MAX_BUFFER_SIZE: int = 10
+
+@pytest.fixture(autouse=True)
+def reset_config_cache() -> None:
+    SimvueConfiguration._check_server.cache_clear()
+    SimvueConfiguration.config_file.cache_clear()
 
 @pytest.fixture
 def create_plain_run(request) -> typing.Generator[typing.Tuple[sv_run.Run, dict], None, None]:
