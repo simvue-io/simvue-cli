@@ -278,8 +278,8 @@ def config_show(ctx) -> None:
 
     # Remove environment override to show full listing
     # instead highlight current server
-    _env_url = os.environ.pop("SIMVUE_URL", None)
-    _env_token = os.environ.pop("SIMVUE_TOKEN", None)
+    _env_url = os.environ.get("SIMVUE_URL")
+    _env_token = os.environ.get("SIMVUE_TOKEN")
 
     _config_file, _config = simvue_cli.config.get_current_configuration()
     _current_url: str | None = None
