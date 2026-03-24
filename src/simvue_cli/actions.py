@@ -107,10 +107,9 @@ def create_simvue_run(
     description: str | None,
     name: str | None,
     folder: str,
-    timeout: int | None,
     retention: int | None,
     environment: bool,
-) -> Run | None:
+) -> Run:
     """Create and initialise a new Simvue run
 
     Parameters
@@ -126,8 +125,6 @@ def create_simvue_run(
         a name to assign to this run
     folder : str
         folder path for this run
-    timeout : int | None
-        timout of run
     retention : int | None
         retention period in seconds
     environment : bool
