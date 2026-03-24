@@ -2,7 +2,7 @@ name: CLI Nightlies (Windows)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 22 * * *'
+    - cron: "30 22 * * *"
 
 permissions:
   contents: read
@@ -27,4 +27,5 @@ jobs:
           SIMVUE_TOKEN: ${{ secrets.SIMVUE_TOKEN }}
         run: |
           uv sync --all-groups --python 3.14
-          uv run --python 3.14 pytest -x -c /dev/null -p no:warnings -v
+          uv run --python 3.14 pytest -x -c /dev/null -p no:warnings -v \
+          -o cache_dir=${GITHUB_WORKSPACE}/.pytest-cache

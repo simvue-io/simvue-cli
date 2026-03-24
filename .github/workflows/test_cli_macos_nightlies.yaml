@@ -2,7 +2,7 @@ name: CLI Nightlies (macOS)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '45 22 * * *'
+    - cron: "45 22 * * *"
 
 permissions:
   contents: read
@@ -28,4 +28,5 @@ jobs:
         run: |
           uv sync --python 3.14 --all-groups
           uv run --python 3.14 \
-          pytest -x -c /dev/null -p no:warnings -v
+          pytest -x -c /dev/null -p no:warnings -v \
+          -o cache_dir=${GITHUB_WORKSPACE}/.pytest-cache

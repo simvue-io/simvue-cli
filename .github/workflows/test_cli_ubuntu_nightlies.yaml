@@ -2,7 +2,7 @@ name: CLI Nightlies (Ubuntu)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 22 * * *'
+    - cron: "0 22 * * *"
 
 permissions:
   contents: read
@@ -31,4 +31,5 @@ jobs:
         run: |
           uv sync --all-groups --python ${{ matrix.python_version }}
           uv run --python ${{ matrix.python_version }} \
-          pytest -x -c /dev/null -p no:warnings -v
+          pytest -x -c /dev/null -p no:warnings -v \
+          -o cache_dir=${GITHUB_WORKSPACE}/.pytest-cache
