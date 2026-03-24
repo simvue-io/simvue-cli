@@ -301,15 +301,14 @@ def test_set_config_options(component: str, value: str) -> None:
         }
     else:
         _orig_config = toml.load(find_first_instance_of_file(CONFIG_FILE_NAMES))
-    _current_config_file = find_first_instance_of_file(CONFIG_FILE_NAMES)
-    assert _current_config_file
+        assert _orig_config
+
     _current_dir = os.getcwd()
 
-    _config = toml.load(_current_config_file)
     with tempfile.TemporaryDirectory() as tempd:
         os.chdir(tempd)
         _ = toml.dump(
-            _config,
+            _orig_config,
                 (_new_file := pathlib.Path(tempd).joinpath("simvue.toml")).open("w")
         )
         assert _new_file.exists()

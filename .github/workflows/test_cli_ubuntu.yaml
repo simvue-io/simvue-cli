@@ -30,4 +30,8 @@ jobs:
         run: |
           uv sync --all-groups --python 3.14
           uv run --python 3.14 \
-          pytest -x --cov=simvue_cli --cov-report=term --cov-report=xml -c /dev/null -p no:warnings -v
+          pytest -x --cov=simvue_cli \
+          --cov-report=term --cov-report=xml \
+          -c /dev/null -p no:warnings \
+          -v \
+          -o cache_dir=${GITHUB_WORKSPACE}/.pytest-cache

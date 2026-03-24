@@ -205,11 +205,11 @@ def about_simvue(ctx) -> None:
         out_table.append(
             ["Python API Version: ", importlib.metadata.version(simvue_client.__name__)]
         )
-    with contextlib.suppress(Exception):
-        server_version: int | str = simvue_cli.actions.get_server_version()
-        if isinstance(server_version, int):
-            raise RuntimeError
-        out_table.append(["Server Version: ", server_version])
+    # with contextlib.suppress(Exception):
+    server_version: int | str = simvue_cli.actions.get_server_version()
+    if isinstance(server_version, int):
+        raise RuntimeError
+    out_table.append(["Server Version: ", server_version])
     if not ctx.obj.get("plain"):
         click.echo(
             "\n".join(
