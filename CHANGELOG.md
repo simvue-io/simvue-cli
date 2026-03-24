@@ -1,4 +1,4 @@
-# Unreleased
+# [v1.4.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.4.0) - 2026-03-24
 
 - Handle download of runs with duplicates of files in artifacts.
 - Allow commands to be executed for an alternative server profile.
