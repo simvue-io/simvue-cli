@@ -1,3 +1,9 @@
+# Unreleased
+
+- Handle download of runs with duplicates of files in artifacts.
+- Allow commands to be executed for an alternative server profile.
+- Fix issues with `click.echo` misuse.
+
 # [v1.3.1](https://github.com/simvue-io/simvue-cli/releases/tag/v1.3.1) - 2025-12-02
 
 - Added filtering to `simvue run list` command.
