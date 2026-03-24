@@ -1,4 +1,5 @@
 import contextlib
+import os
 import uuid
 import random
 import string
@@ -34,11 +35,19 @@ def test_config_update(component: str) -> None:
     TEST_TOKEN: str = "".join(random.choice(string.ascii_letters) for _ in range(100))
     runner = click.testing.CliRunner()
 
-    _config_file = find_first_instance_of_file(CONFIG_FILE_NAMES)
+    if (_server_url := os.environ.get("SIMVUE_URL")) and (_server_token := os.environ.get("SIMVUE_TOKEN")):
+        _orig_config = {
+            "server": {
+                "url": _server_url,
+                "token": _server_token
+            }
+        }
+    else:
+        _config_file = find_first_instance_of_file(CONFIG_FILE_NAMES)
 
-    assert _config_file
+        assert _config_file
 
-    _orig_config = toml.load(_config_file)
+        _orig_config = toml.load(_config_file)
 
     with runner.isolated_filesystem():
         with open("simvue.toml", "w") as out_f:
@@ -846,7 +855,15 @@ def test_use_alternative_profile(create_runs_json: pathlib.Path) -> None:
     from simvue.utilities import find_first_instance_of_file
     import toml
 
-    _orig_config = toml.load(find_first_instance_of_file(CONFIG_FILE_NAMES))
+    if (_server_url := os.environ.get("SIMVUE_URL")) and (_server_token := os.environ.get("SIMVUE_TOKEN")):
+        _orig_config = {
+            "server": {
+                "url": _server_url,
+                "token": _server_token
+            }
+        }
+    else:
+        _orig_config = toml.load(find_first_instance_of_file(CONFIG_FILE_NAMES))
 
     _test_config = {
         "server": {

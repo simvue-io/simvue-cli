@@ -292,10 +292,19 @@ def test_runs_push(create_runs_json: pathlib.Path) -> None:
     ids=("url", "token")
 )
 def test_set_config_options(component: str, value: str) -> None:
+    if (_server_url := os.environ.get("SIMVUE_URL")) and (_server_token := os.environ.get("SIMVUE_TOKEN")):
+        _orig_config = {
+            "server": {
+                "url": _server_url,
+                "token": _server_token
+            }
+        }
+    else:
+        _orig_config = toml.load(find_first_instance_of_file(CONFIG_FILE_NAMES))
     _current_config_file = find_first_instance_of_file(CONFIG_FILE_NAMES)
+    assert _current_config_file
     _current_dir = os.getcwd()
 
-    assert _current_config_file
     _config = toml.load(_current_config_file)
     with tempfile.TemporaryDirectory() as tempd:
         os.chdir(tempd)
