@@ -178,9 +178,9 @@ def create_objects_display(
 
     # Remove 'is_' prefix from relevant columns and format
     table_headers = [
-        c.replace("is_", "")
+        c.replace("is_", "").replace(".", " ").title()
         if plain_text
-        else click.style(c.replace("is_", ""), bold=True)
+        else click.style(c.replace("is_", "").replace(".", " ").title(), bold=True)
         for c in (("#", *columns) if enumerate_ else columns)
     ]
 
@@ -202,14 +202,14 @@ def create_objects_display(
                     getattr(obj, _keys[0]), delimiter=_flat_dict_delim
                 )
                 try:
-                    _metadata_key = column.replace(f"{_keys[0]}.", "").strip()
-                    value = _elements[_metadata_key.replace(".", _flat_dict_delim)]
+                    _subgroup_key = column.replace(f"{_keys[0]}.", "").strip()
+                    value = _elements[_subgroup_key.replace(".", _flat_dict_delim)]
                     if isinstance(value, flatdict.FlatDict):
                         value = ", ".join(f"{k}=..." for k in value.keys())
+                    if not value:
+                        value = "None"
                 except KeyError:
                     value = "N/A"
-
-            # FIXME: Hack for if a property has not been added to the API yet
             elif not (value := getattr(obj, column, None)):
                 try:
                     value = obj._get_attribute(column)

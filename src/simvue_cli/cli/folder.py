@@ -1,10 +1,15 @@
 """Simvue Folder Commands."""
 
+from typing import Literal
 import click
 import re
 import json
 import tabulate
 import sys
+
+from click_option_group import optgroup
+
+from simvue_cli.validation import SimvueFolder, TimeInterval
 
 from .display import create_objects_display, format_folder_tree
 
@@ -46,11 +51,6 @@ def simvue_folder(_) -> None:
     default=20,
     show_default=True,
 )
-@click.option("--path", is_flag=True, help="Show path")
-@click.option("--tags", is_flag=True, help="Show tags")
-@click.option("--created", is_flag=True, help="Show created timestamp")
-@click.option("--name", is_flag=True, help="Show names")
-@click.option("--description", is_flag=True, help="Show description")
 @click.option(
     "--sort-by",
     help="Specify columns to sort by",
@@ -60,33 +60,75 @@ def simvue_folder(_) -> None:
     show_default=True,
 )
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
+@click.option("-t", "--created", is_flag=True, help="Show created timestamp")
+@optgroup.group(
+    name="Folder attribute filters", help="Specify columns to display and/or filter on."
+)
+@optgroup.option(
+    "-p",
+    "--path",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / Filter path. Passing of TEXT is optional.",
+    type=SimvueFolder,
+)
+@optgroup.option(
+    "-T",
+    "--tags",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / Filter tags. Passing of TEXT is optional. Tags in filter must be comma separated.",
+)
+@optgroup.option(
+    "--created-within", help='Filter by creation time, e.g. "10h".', type=TimeInterval
+)
+@optgroup.option(
+    "-d",
+    "--description",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / Filter description. Passing of TEXT is optional.",
+)
 def folder_list(
     ctx,
     table_format: str,
     enumerate_: bool,
-    path: bool,
-    tags: bool,
-    name: bool,
+    path: Literal["show-only"] | str | None,
+    tags: Literal["show-only"] | str | None,
     created: bool,
-    description: bool,
+    created_within: int | None,
+    description: Literal["show-only"] | str | None,
     **kwargs,
 ) -> None:
     """Retrieve folders list from Simvue server"""
-    folders = simvue_cli.actions.get_folders_list(**kwargs)
-    if not folders:
-        return
     columns = ["id"]
+
+    _filter = Folder.filter()
 
     if created:
         columns.append("created")
-    if path:
+
+    if created_within:
+        _filter = _filter.created_within(hours=created_within)
+
+    if path == "show-only":
         columns.append("path")
-    if name:
-        columns.append("name")
+    elif path:
+        _filter = _filter.has_path(path)
+
     if tags:
         columns.append("tags")
-    if description:
+
+    if description == "show-only":
         columns.append("description")
+    elif description:
+        _filter = _filter.has_description_containing(description)
+
+    kwargs["filters"] = _filter.as_list()
+
+    folders = simvue_cli.actions.get_folders_list(**kwargs)
+    if not folders:
+        return
 
     table = create_objects_display(
         columns,
@@ -255,7 +297,7 @@ def display_folder_tree(folder_id: str | None, detail: bool) -> None:
             return
     else:
         try:
-            folder = simvue_cli.actions.get_folder(folder_id)
+            folder: Folder = simvue_cli.actions.get_folder(folder_id)
         except ObjectNotFoundError as e:
             error_msg = f"Failed to retrieve folder '{folder_id}': {e.args[0]}"
             click.secho(error_msg, fg="red", bold=True)

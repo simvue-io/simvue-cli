@@ -8,12 +8,24 @@ import sys
 import json
 import re
 
+from click_option_group import optgroup
+from typing import Literal, TYPE_CHECKING
+
 from simvue_cli.cli.display import create_objects_display
-from simvue_cli.validation import SimvueName, SimvueFolder, JSONType
+from simvue_cli.validation import (
+    SimvueName,
+    SimvueFolder,
+    JSONType,
+    TimeInterval,
+)
 from simvue.exception import ObjectNotFoundError
+from simvue.api.objects.filter import Status
 import simvue_cli.actions
 
 from simvue.api.objects import Run
+
+if TYPE_CHECKING:
+    from simvue.api.objects.filter import RunsFilter
 
 
 @click.group("run")
@@ -190,7 +202,7 @@ def update_metadata(run_id: str, metadata: dict) -> None:
     simvue_cli.actions.update_metadata(run_id, metadata)
 
 
-@simvue_run.command("list", context_settings={"ignore_unknown_options": True})
+@simvue_run.command("list")
 @click.pass_context
 @click.option(
     "--format",
@@ -209,57 +221,10 @@ def update_metadata(run_id: str, metadata: dict) -> None:
 )
 @click.option(
     "--count",
-    type=int,
+    type=click.IntRange(min=1),
     help="Maximum number of runs to retrieve",
     default=20,
     show_default=True,
-)
-@click.option("-T", "--tags", is_flag=True, help="Show tags")
-@click.option("-n", "--name", is_flag=True, help="Show names")
-@click.option("-u", "--user", is_flag=True, help="Show users")
-@click.option("-t", "--created", is_flag=True, help="Show created timestamp")
-@click.option("-d", "--description", is_flag=True, help="Show description")
-@click.option("-s", "--status", is_flag=True, help="Show status")
-@click.option("-m", "--metadata", multiple=True, help="Show metadata value")
-@click.option("-f", "--folder", is_flag=True, help="Show folder")
-@click.option(
-    "-F",
-    "--filter",
-    "filters",
-    multiple=True,
-    help="""
-Apply filters when searching runs.
-
-Accepts filters in the form of <column><comparator><value>, with multiple instances
-of this option being allowed. The comparators allowed vary depending on the column being
-filtered by:
-
->        Greater than
-
-<        Less than
-
->=       Greater than or equal to
-
-<=       Less than or equal to
-
-= or ==  Equal to (no value implies general 'exists')
-
-!=       Not equal to (no value implies general 'does not exist')
-
-~        Contains
-
-!~       Does not contain
-
-Examples
-
-    --filter folder=/unit_tests
-
-    --filter 'metadata.custom_meta>10'
-
-    --filter starred
-
-    --filter name~test
-""",
 )
 @click.option(
     "--sort-by",
@@ -272,18 +237,116 @@ Examples
 @click.option("--reverse", help="Reverse ordering", default=False, is_flag=True)
 @click.option("--shared", help="Include shared runs", default=False, is_flag=True)
 @click.option("--starred", help="Filter to favorited runs", default=False, is_flag=True)
+@click.option("-t", "--created", is_flag=True, help="Show the created time.")
+@optgroup.group(
+    name="Run attribute filters", help="Specify columns to display and/or filter on."
+)
+@optgroup.option(
+    "-T",
+    "--tags",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter tags, passing of TEXT is optional. Tags in filter must be comma separated.",
+)
+@optgroup.option(
+    "-n",
+    "--name",
+    is_flag=False,
+    flag_value="show-only",
+    type=SimvueName,
+    help="Show / filter names",
+)
+@optgroup.option(
+    "-u", "--user", is_flag=True, flag_value="show-only", help="Show / filter users"
+)
+@optgroup.option(
+    "--created-within", help='Filter by creation time, e.g. "10h".', type=TimeInterval
+)
+@optgroup.option(
+    "--started-within", help='Filter by start time, e.g. "10h"', type=TimeInterval
+)
+@optgroup.option(
+    "--ended-within", help='Filter by end time, e.g. "10h"', type=TimeInterval
+)
+@optgroup.option(
+    "--modified-within", help="Filter by last modified time.", type=TimeInterval
+)
+@optgroup.option(
+    "-d",
+    "--description",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter description",
+)
+@optgroup.option(
+    "-s",
+    "--status",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter status, passing of TEXT is optional.",
+    type=Status,
+)
+@optgroup.option(
+    "-f",
+    "--folder",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter folder, passing of TEXT is optional.",
+    type=SimvueFolder,
+    show_default=True,
+)
+@optgroup.option("-m", "--metadata", multiple=True, help="Show metadata value")
+@optgroup.option(
+    "--working-dir",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter working directory, passing of TEXT is optional.",
+)
+@optgroup.option(
+    "--gpu-name",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter GPU name, passing of TEXT is optional.",
+)
+@optgroup.option(
+    "--gpu-driver",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter GPU driver, passing of TEXT is optional.",
+)
+@optgroup.option(
+    "--cpu-arch",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter CPU architecture, passing of TEXT is optional.",
+)
+@optgroup.option(
+    "--cpu-processor",
+    is_flag=False,
+    flag_value="show-only",
+    help="Show / filter CPU processoritecture, passing of TEXT is optional.",
+)
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 def list_runs(
     ctx,
     table_format: str,
-    tags: bool,
-    description: bool,
-    user: bool,
+    tags: Literal["show-only"] | str | None,
+    description: Literal["show-only"] | str | None,
+    user: Literal["show-only"] | str | None,
     created: bool,
     enumerate_: bool,
-    name: bool,
-    folder: bool,
-    status: bool,
+    name: Literal["show-only"] | str | None,
+    folder: Literal["show-only"] | str | None,
+    status: Literal["show-only"] | Status | None,
+    gpu_name: Literal["show-only"] | str | None,
+    gpu_driver: Literal["show-only"] | str | None,
+    cpu_arch: Literal["show-only"] | str | None,
+    cpu_processor: Literal["show-only"] | str | None,
+    created_within: int | None,
+    started_within: int | None,
+    ended_within: int | None,
+    modified_within: int | None,
+    working_dir: Literal["show-only"] | str | None,
     args: str,
     shared: bool,
     starred: bool,
@@ -295,35 +358,106 @@ def list_runs(
     ]
 
     # To avoid ambiguity only allow shared to activated by command line argument
-    kwargs["filters"] = [
-        filter for filter in kwargs["filters"] if not filter.startswith("user")
-    ]
-
     if not shared:
-        kwargs["filters"].append("user == self")
+        _filter: "RunsFilter" = Run.filter().owner()
+    else:
+        _filter = Run.filter().exclude_owner()
 
     if starred:
-        kwargs["filters"].append("starred")
+        _filter = _filter.starred()
 
     if _metadata:
         kwargs["metadata"] = True
-    runs = simvue_cli.actions.get_runs_list(**kwargs)
+
     columns = ["id"] + _metadata
 
     if created:
         columns.append("created")
-    if name:
+
+    if started_within:
+        _filter = _filter.started_within(hours=started_within)
+
+    if modified_within:
+        _filter = _filter.modified_within(hours=modified_within)
+
+    if created_within:
+        _filter = _filter.created_within(hours=created_within)
+
+    if ended_within:
+        _filter = _filter.ended_within(hours=ended_within)
+
+    if working_dir == "show-only":
+        kwargs["system_info"] = True
+        columns.append("system.cwd")
+    elif working_dir:
+        kwargs["system_info"] = True
+        _filter = _filter.has_working_directory(working_dir)
+
+    if gpu_name == "show-only":
+        kwargs["system_info"] = True
+        columns.append("system.gpu.name")
+    elif gpu_name:
+        kwargs["system_info"] = True
+        _filter = _filter.has_gpu(name=gpu_name)
+
+    if gpu_driver == "show-only":
+        kwargs["system_info"] = True
+        columns.append("system.gpu.driver")
+    elif gpu_driver:
+        kwargs["system_info"] = True
+        _filter = _filter.has_gpu(driver=gpu_driver)
+
+    if cpu_arch == "show-only":
+        kwargs["system_info"] = True
+        columns.append("system.cpu.arch")
+    elif cpu_arch:
+        kwargs["system_info"] = True
+        _filter = _filter.has_cpu(architecture=cpu_arch)
+
+    if cpu_processor == "show-only":
+        kwargs["system_info"] = True
+        columns.append("system.cpu.processor")
+    elif cpu_processor:
+        kwargs["system_info"] = True
+        _filter = _filter.has_cpu(processor=cpu_processor)
+
+    if name == "show-only":
         columns.append("name")
-    if folder:
+    elif name:
+        _filter = _filter.has_name(name)
+
+    if folder == "show-only":
         columns.append("folder")
-    if tags:
+    elif folder:
+        _filter = _filter.in_folder(folder)
+
+    if tags == "show-only":
         columns.append("tags")
-    if user:
+    elif tags:
+        _tags: list[str] = tags.split(",")
+        for tag in _tags:
+            if not (_tag := tag.strip().rstrip()):
+                continue
+            _filter = _filter.has_tag(_tag)
+
+    if user == "show-only":
         columns.append("user")
-    if description:
+    elif user:
+        _filter = _filter.owner(user)
+
+    if description == "show-only":
         columns.append("description")
-    if status:
+    elif description:
+        _filter = _filter.has_description_containing(description)
+
+    if status == "show-only":
         columns.append("status")
+    elif status:
+        _filter = _filter.has_status(status)
+
+    kwargs["filters"] = _filter.as_list()
+
+    runs = simvue_cli.actions.get_runs_list(**kwargs)
 
     table = create_objects_display(
         columns,
@@ -399,7 +533,7 @@ def get_run_json(ctx, run_id: str) -> None:
 @click.option("--download-url", is_flag=True, help="Show artifact download URL")
 @click.option("--uploaded", is_flag=True, help="Show artifact upload status")
 @click.option("--checksum", is_flag=True, help="Show artifact checksum")
-@click.option("--name", is_flag=True, help="Show artifact name")
+@click.option("--name", is_flag=True, flag_value=None, help="Show artifact name")
 @click.option("--size", is_flag=True, help="Show artifact size")
 @click.argument("run_id", required=False)
 def get_run_artifacts(
@@ -414,7 +548,7 @@ def get_run_artifacts(
     user: bool,
     download_url: bool,
     uploaded: bool,
-    name: bool,
+    name: str | None,
     size: bool,
     **_,
 ) -> None:
