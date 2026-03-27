@@ -43,6 +43,7 @@ dependencies = [
   "more-itertools>=10.8.0",
   "pydantic>=2.11.9",
   "simvue>=2.4.0",
+  "plotext>=5.3.2",
 ]
 
 [project.urls]
@@ -52,6 +53,9 @@ documentation = "https://docs.simvue.io"
 
 [project.scripts]
 simvue = "simvue_cli.cli:simvue"
+
+[project.optional-dependencies]
+plot = []
 
 [tool.ruff]
 lint.extend-select = ["C901"]

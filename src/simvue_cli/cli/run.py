@@ -1,5 +1,6 @@
 """Simvue Run Commands."""
 
+import time
 import click
 import click_option_group
 import tabulate
@@ -7,20 +8,25 @@ import pathlib
 import sys
 import json
 import re
+import plotext as plt
 
 from click_option_group import optgroup
 from typing import Literal, TYPE_CHECKING
 
 from simvue_cli.cli.display import create_objects_display
 from simvue_cli.validation import (
+    MetricName,
+    ObjectID,
     SimvueName,
     SimvueFolder,
     JSONType,
+    TimeFormat,
     TimeInterval,
 )
 from simvue.exception import ObjectNotFoundError
 from simvue.api.objects.filter import Status
 import simvue_cli.actions
+import simvue_cli.plot
 
 from simvue.api.objects import Run
 
@@ -638,3 +644,61 @@ def pull_simvue_run(ctx, output_dir: str, run_id: str) -> None:
             else click.style(_disp_str, fg="red", bold=True)
         )
         sys.exit(1)
+
+
+@simvue_run.command("plot")
+@click.pass_context
+@click.argument("run_id", type=ObjectID, nargs=-1)
+@click.option("--metric", type=MetricName, multiple=True, required=True)
+@click.option(
+    "--time-format", type=TimeFormat, required=False, default="step", show_default=True
+)
+@optgroup.group(name="Plotting Options", help="Customise the plotting output")
+@optgroup.option(
+    "-Y",
+    "--threshold",
+    type=float,
+    help="Superimpose threshold line at point on metric axis.",
+    default=None,
+)
+@optgroup.option(
+    "-X",
+    "--cutoff",
+    type=float,
+    help="Superimpose threshold line at point on time axis.",
+    default=None,
+)
+@optgroup.option(
+    "--watch", is_flag=True, default=False, help="Monitor the metric data live."
+)
+def plot_run_metric(
+    _,
+    run_id: list[str],
+    metric: list[str],
+    watch: bool,
+    threshold: float | None,
+    time_format: Literal["step", "time", "timestamp"],
+    cutoff: float | None,
+) -> None:
+    """Plot a metric from a given run."""
+
+    def _get_plot() -> str:
+        _plot_iter = simvue_cli.actions.get_metrics(
+            run_ids=run_id, metric_names=metric, x_axis=time_format
+        )
+        return simvue_cli.plot.plot_simvue_metrics(
+            plot_iterator=_plot_iter,
+            time_label=time_format,
+            marker_y_coord=threshold,
+            marker_x_coord=cutoff,
+        )
+
+    try:
+        while True:
+            if not watch:
+                sys.exit(0)
+            _ = _get_plot()
+            time.sleep(2)
+            plt.cld()
+    except KeyboardInterrupt:
+        sys.exit(0)

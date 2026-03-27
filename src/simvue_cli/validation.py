@@ -17,7 +17,7 @@ import humanfriendly
 import click
 
 from click.core import Context, Parameter
-from simvue.models import FOLDER_REGEX, NAME_REGEX
+from simvue.models import FOLDER_REGEX, METRIC_KEY_REGEX, NAME_REGEX, OBJECT_ID
 
 
 class TimeIntervalType(click.ParamType):
@@ -93,3 +93,6 @@ JSONType = JSONParamType()
 Email = PatternMatch(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 UserName = PatternMatch(r"^[a-zA-Z0-9\-\_\.]+$")
 TimeInterval = TimeIntervalType()
+ObjectID = PatternMatch(OBJECT_ID)
+MetricName = PatternMatch(METRIC_KEY_REGEX)
+TimeFormat = PatternMatch(r"^(step|time|timestamp)$")

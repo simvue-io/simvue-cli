@@ -916,6 +916,15 @@ wheels = [
 ]
 
 [[package]]
+name = "plotext"
+version = "5.3.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/d7/f75f397af966fe252d0d34ffd3cae765317fce2134f925f95e7d6725d1ce/plotext-5.3.2.tar.gz", hash = "sha256:52d1e932e67c177bf357a3f0fe6ce14d1a96f7f7d5679d7b455b929df517068e", size = 61967, upload-time = "2024-09-24T15:13:37.728Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f6/1e/12fe7c40cd2099a1f454518754ed229b01beaf3bbb343127f0cc13ce6c22/plotext-5.3.2-py3-none-any.whl", hash = "sha256:394362349c1ddbf319548cfac17ca65e6d5dfc03200c40dfdc0503b3e95a2283", size = 64047, upload-time = "2024-09-24T15:13:36.296Z" },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1528,6 +1537,7 @@ dependencies = [
     { name = "click-option-group" },
     { name = "click-params" },
     { name = "more-itertools" },
+    { name = "plotext" },
     { name = "pydantic" },
     { name = "regex" },
     { name = "requests" },
@@ -1562,6 +1572,7 @@ requires-dist = [
     { name = "click-option-group", specifier = ">=0.5.7" },
     { name = "click-params", specifier = ">=0.5.0" },
     { name = "more-itertools", specifier = ">=10.8.0" },
+    { name = "plotext", specifier = ">=5.3.2" },
     { name = "pydantic", specifier = ">=2.11.9" },
     { name = "regex", specifier = ">=2024.11.6" },
     { name = "requests", specifier = ">=2.32.3" },
@@ -1570,6 +1581,7 @@ requires-dist = [
     { name = "toml", specifier = ">=0.10.2" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
+provides-extras = ["plot"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -960,3 +960,25 @@ def purge_local_simvue_files() -> list[pathlib.Path]:
         _remove_files.append(global_simvue_file)
 
     return _remove_files
+
+
+def get_metrics(
+    run_ids: list[str],
+    metric_names: list[str],
+    *,
+    x_axis: typing.Literal["step", "timestamp", "time"] = "step",
+    n_data_points: int | None = None,
+) -> Generator[tuple[str, str, list[float], list[float]]]:
+    """Retrieve the values for a metric."""
+    _x_values: list[float] = []
+    _y_values: list[float] = []
+
+    for entry in Metrics.get(
+        metrics=metric_names, xaxis=x_axis, runs=run_ids, count=n_data_points
+    ):
+        for metric_name in metric_names:
+            for run_id in run_ids:
+                _values = entry[run_id][metric_name]
+                _y_values += [d["value"] for d in _values]
+                _x_values += [d[x_axis] for d in _values]
+                yield metric_name, run_id, _x_values, _y_values
