@@ -682,22 +682,24 @@ def plot_run_metric(
 ) -> None:
     """Plot a metric from a given run."""
 
-    def _get_plot() -> str:
+    def _get_plot() -> None:
         _plot_iter = simvue_cli.actions.get_metrics(
             run_ids=run_id, metric_names=metric, x_axis=time_format
         )
-        return simvue_cli.plot.plot_simvue_metrics(
+        simvue_cli.plot.plot_simvue_metrics(
             plot_iterator=_plot_iter,
             time_label=time_format,
+            single_metric=len(metric) < 2,
+            single_run=len(run_id) < 2,
             marker_y_coord=threshold,
             marker_x_coord=cutoff,
         )
 
     try:
         while True:
+            _get_plot()
             if not watch:
                 sys.exit(0)
-            _ = _get_plot()
             time.sleep(2)
             plt.cld()
     except KeyboardInterrupt:
