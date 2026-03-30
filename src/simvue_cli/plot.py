@@ -16,6 +16,7 @@ def plot_simvue_metrics(
     single_metric: bool = False,
     single_run: bool = False,
 ) -> None:
+    """Plot a set of metrics in the terminal."""
     _metric_label: str | None = None
     _run_label: str | None = None
     plt.clear_figure()
