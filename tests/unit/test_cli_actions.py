@@ -19,6 +19,7 @@ from simvue.exception import ObjectNotFoundError
 from simvue.run import SimvueConfiguration, UserAlert
 import simvue_cli.actions
 import simvue_cli.config
+from tests.conftest import create_test_run
 
 
 
@@ -371,3 +372,6 @@ def test_purge_local_files(monkeypatch) -> None:
         assert _offline_cache in _deleted_files
         assert _global_config in _deleted_files
 
+
+def test_retrieve_metrics(create_test_run: tuple[Run, dict]) -> None:
+    _run, _data = create_test_run
