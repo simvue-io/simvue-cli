@@ -172,9 +172,9 @@ def create_runs_json(monkeypatch) -> pathlib.Path:
                     for _ in range(N_METRICS)
                 ]
                 _run = {
-                    "name": _fake.name(),
+                    "name": _fake.random_object_of_concern(),
                     "description": _fake.text(),
-                    "metadata": {_fake.name(): _fake.name()},
+                    "metadata": {"first_name": _fake.given_name(), "last_name": _fake.last_name()},
                     "tags": ["test_simvue_cli"],
                 }
                 _out_data.append(_run)
