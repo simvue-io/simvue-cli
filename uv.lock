@@ -395,7 +395,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -1495,7 +1495,7 @@ wheels = [
 [[package]]
 name = "simvue"
 version = "2.5.4"
-source = { directory = "../python-api" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "deepmerge" },
@@ -1523,49 +1523,9 @@ dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "unyt" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "click", specifier = ">=8.4.1,<9.0.0" },
-    { name = "deepmerge", specifier = ">=2.0,<3.0" },
-    { name = "email-validator", specifier = ">=2.2.0,<3.0.0" },
-    { name = "flatdict", specifier = "==4.1.0" },
-    { name = "geocoder", specifier = ">=1.38.1,<2.0.0" },
-    { name = "gitpython", specifier = ">=3.1.44,<4.0.0" },
-    { name = "humanfriendly", specifier = ">=10.0,<11.0" },
-    { name = "matplotlib", marker = "extra == 'plot'", specifier = ">=3.10.0,<4.0.0" },
-    { name = "msgpack", specifier = ">=1.1.0,<2.0.0" },
-    { name = "numpy", specifier = ">=2.0.0,<3.0.0" },
-    { name = "pandas", specifier = ">=2.2.3,<3.0.0" },
-    { name = "plotly", marker = "extra == 'plot'", specifier = ">=6.0.0,<7.0.0" },
-    { name = "psutil", specifier = ">=6.1.1,<8.0.0" },
-    { name = "pydantic", specifier = ">=2.11,<3.0.0" },
-    { name = "pydantic-extra-types", specifier = ">=2.10.5,<3.0.0" },
-    { name = "pyjwt", specifier = ">=2.13.0,<3.0.0" },
-    { name = "pytest", specifier = ">=9.0.3,<10.0.0" },
-    { name = "pyyaml", specifier = ">=6.0.2,<7.0.0" },
-    { name = "randomname", specifier = ">=0.2.1,<0.3.0" },
-    { name = "requests", specifier = ">=2.32.3,<3.0.0" },
-    { name = "semver", specifier = ">=3.0.4,<4.0.0" },
-    { name = "tabulate", specifier = ">=0.9.0,<0.11.0" },
-    { name = "tenacity", specifier = ">=9.0.0,<10.0.0" },
-    { name = "toml", specifier = ">=0.10.2,<0.11.0" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'", specifier = ">=4.12.2,<5.0.0" },
-    { name = "unyt", specifier = ">=3.1.0,<4.0.0" },
-]
-provides-extras = ["plot"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "interrogate", specifier = ">=1.7.0" },
-    { name = "jinja2", specifier = ">=3.1.6" },
-    { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "pytest-mock", specifier = ">=3.15.1" },
-    { name = "pytest-sugar", specifier = ">=1.1.1" },
-    { name = "pytest-timeout", specifier = ">=2.4.0" },
-    { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "ruff", specifier = ">=0.15.14" },
-    { name = "types-requests", specifier = ">=2.33.0.20260518" },
+sdist = { url = "https://files.pythonhosted.org/packages/88/8f/109f0f01d82abbbd1c54708f20e4278d33d3f6f8b94931bb83aaad43fe44/simvue-2.5.4.tar.gz", hash = "sha256:e1215d341bc5030159a5d06eba1b6873c20ca397a6fef0923e4cf4e3db238004", size = 483128, upload-time = "2026-05-28T07:29:55.964Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/47/8f/c85ae6a856475a042ba8aecf9e38910910a2944d628b74c70d94b93fd13e/simvue-2.5.4-py3-none-any.whl", hash = "sha256:ab6f6fd6656a844e880c63a97efb7218c7ddea1f6f374ed07aaf2bef6ef0cbd9", size = 172400, upload-time = "2026-05-28T07:29:54.627Z" },
 ]
 
 [[package]]
@@ -1593,7 +1553,6 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-xdist" },
-    { name = "simvue" },
     { name = "ty" },
 ]
 docs = [
@@ -1616,7 +1575,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.9" },
     { name = "regex", specifier = ">=2024.11.6" },
     { name = "requests", specifier = ">=2.32.3" },
-    { name = "simvue", directory = "../python-api" },
+    { name = "simvue", specifier = ">=2.5.4" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "toml", specifier = ">=0.10.2" },
     { name = "tqdm", specifier = ">=4.67.1" },
@@ -1629,7 +1588,6 @@ dev = [
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "simvue", directory = "../python-api" },
     { name = "ty", specifier = ">=0.0.24" },
 ]
 docs = [
