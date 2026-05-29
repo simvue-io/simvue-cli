@@ -1,0 +1,59 @@
+exclude = "^tests|^docs|^examples|^notebooks"
+[[repos]]
+repo = "builtin"
+
+[[repos.hooks]]
+id = "check-toml"
+
+[[repos.hooks]]
+id = "check-yaml"
+
+[[repos.hooks]]
+id = "pretty-format-json"
+args = ["--autofix"]
+
+[[repos.hooks]]
+id = "trailing-whitespace"
+
+[[repos.hooks]]
+id = "check-merge-conflict"
+
+[[repos.hooks]]
+id = "end-of-file-fixer"
+
+[[repos.hooks]]
+id = "mixed-line-ending"
+
+[[repos.hooks]]
+id = "no-commit-to-branch"
+args = ["--branch", "main", "--branch", "dev"]
+
+[[repos.hooks]]
+id = "check-added-large-files"
+
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.11.2"
+[[repos.hooks]]
+id = "ruff"
+args = ["--fix", "--exit-non-zero-on-fix", "--ignore=C901"]
+
+[[repos.hooks]]
+id = "ruff-format"
+
+
+[[repos]]
+repo = "https://github.com/conorfalvey/check_pdb_hook"
+rev = "0.0.9"
+[[repos.hooks]]
+id = "check_pdb_hook"
+pass_filenames = false
+
+
+[[repos]]
+repo = "https://github.com/PyCQA/bandit.git"
+rev = "1.8.3"
+[[repos.hooks]]
+id = "bandit"
+args = ["-lll", "--recursive", "clumper"]
