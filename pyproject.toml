@@ -42,7 +42,7 @@ dependencies = [
   "tqdm>=4.67.1",
   "more-itertools>=10.8.0",
   "pydantic>=2.11.9",
-  "simvue>=2.4.0",
+  "simvue>=2.5.10",
 ]
 
 [project.urls]
