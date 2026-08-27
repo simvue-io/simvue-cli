@@ -1,3 +1,9 @@
+# Unreleased
+
+- Changed filtering to be explicit using same arguments as column visibility, e.g. `--name` vs `--name=my_run` for runs.
+- Added folder filtering.
+- **NEW** added ability to plot metrics from the terminal, including multiplots and watching metrics live.
+
 # [v1.4.0](https://github.com/simvue-io/simvue-cli/releases/tag/v1.4.0) - 2026-03-24
 
 - Handle download of runs with duplicates of files in artifacts.

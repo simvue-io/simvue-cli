@@ -1,6 +1,4 @@
-"""
-Simvue CLI Actions
-==================
+"""Simvue CLI Actions
 
 Contains callbacks for CLI commands
 """
@@ -13,23 +11,26 @@ import pathlib
 import json
 import re
 import sys
-from simvue.api.objects.alert.fetch import AlertType
-from simvue.api.objects.storage.file import FileStorage
 import tqdm
 import typing
 import time
-from simvue.exception import ObjectNotFoundError
 import toml
 import venv
 import shutil
 import subprocess
 
 import click
+
 import simvue.api.request as sv_api
 import simvue.metadata as sv_meta
 
 from datetime import datetime, timezone
 from collections.abc import Generator
+
+
+from simvue.api.objects.alert.fetch import AlertType
+from simvue.api.objects.storage.file import FileStorage
+from simvue.exception import ObjectNotFoundError
 
 from simvue.run import get_system
 from simvue.client import Client
@@ -88,9 +89,11 @@ def _check_run_exists(run_id: str) -> tuple[pathlib.Path, Run]:
     if not run_shelf_file.exists():
         out_data = {"step": 0, "start_time": time.time()}
         _metric_steps: list[int] = [
-            metric.get("step", 0) for _, metric in run.metrics or []
+            typing.cast("int", metric.get("step", 0)) for _, metric in run.metrics or []
         ]
-        _times: list[int] = [metric.get("time", 0) for _, metric in run.metrics or []]
+        _times: list[int] = [
+            typing.cast("int", metric.get("time", 0)) for _, metric in run.metrics or []
+        ]
         if _metric_steps:
             out_data["step"] = max(_metric_steps)
         if _times:
@@ -107,10 +110,9 @@ def create_simvue_run(
     description: str | None,
     name: str | None,
     folder: str,
-    timeout: int | None,
     retention: int | None,
     environment: bool,
-) -> Run | None:
+) -> Run:
     """Create and initialise a new Simvue run
 
     Parameters
@@ -126,8 +128,6 @@ def create_simvue_run(
         a name to assign to this run
     folder : str
         folder path for this run
-    timeout : int | None
-        timout of run
     retention : int | None
         retention period in seconds
     environment : bool
@@ -141,12 +141,12 @@ def create_simvue_run(
     """
     if folder != "/":
         try:
-            _folder = Folder.new(path=folder)
-            _folder.commit()
+            _folder: Folder = Folder.new(path=folder)
+            _ = _folder.commit()
         except RuntimeError as e:
             if "status 409" not in e.args[0]:
                 raise e
-    _run = Run.new(folder=folder)
+    _run: Run = Run.new(folder=folder)
 
     _run.tags = tags or []
     _run.status = "running" if running else "created"
@@ -218,6 +218,8 @@ def log_event(run_id: str, event_message: str, *, log_level: str = "info") -> No
         identifier for the target run
     event_message : str
         the message to be displayed
+    log_level : str
+        level to log event at, default is 'info'
 
     """
     _, run = _check_run_exists(run_id)
@@ -361,15 +363,13 @@ def parse_filters(filters: list[str]) -> list[str]:
 
 
 def get_runs_list(
-    sort_by: list[str], reverse: bool, filters: list[str] | None = None, **kwargs
+    sort_by: list[str], reverse: bool, **kwargs
 ) -> Generator[tuple[str, Run]]:
     """Retrieve list of Simvue runs"""
     _sorting: list[dict[str, str]] = [
         {"column": c, "descending": not reverse} for c in sort_by
     ]
-
-    if filters:
-        kwargs["filters"] = json.dumps(parse_filters(filters))
+    kwargs["filters"] = json.dumps(kwargs["filters"])
 
     return Run.get(sorting=_sorting, **kwargs)
 
@@ -406,12 +406,14 @@ def get_storages_list(**kwargs) -> typing.Generator[tuple[str, Storage], None, N
 
 
 def get_folders_list(
-    sort_by: list[str], reverse: bool, **kwargs
+    sort_by: list[str], reverse: bool, filters: list[str] | None = None, **kwargs
 ) -> typing.Generator[tuple[str, Run], None, None]:
     """Retrieve list of Simvue folders"""
     _sorting: list[dict[str, str]] = [
         {"column": c, "descending": not reverse} for c in sort_by
     ]
+    if filters:
+        kwargs["filters"] = json.dumps(parse_filters(filters))
     return Folder.get(sorting=_sorting, **kwargs)
 
 
@@ -961,3 +963,23 @@ def purge_local_simvue_files() -> list[pathlib.Path]:
         _remove_files.append(global_simvue_file)
 
     return _remove_files
+
+
+def get_metrics(
+    run_ids: list[str],
+    metric_names: list[str],
+    *,
+    x_axis: typing.Literal["step", "timestamp", "time"] = "step",
+    n_data_points: int | None = None,
+) -> Generator[tuple[str, str, list[float | str], list[float]]]:
+    """Retrieve the values for a metric."""
+
+    for entry in Metrics.get(
+        metrics=metric_names, xaxis=x_axis, runs=run_ids, count=n_data_points
+    ):
+        for metric_name in metric_names:
+            for run_id in run_ids:
+                _values = entry[run_id][metric_name]
+                _y_values: list[float] = [d["value"] for d in _values]
+                _x_values: list[float | str] = [d[x_axis] for d in _values]
+                yield metric_name, run_id, _x_values, _y_values
