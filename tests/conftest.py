@@ -161,20 +161,21 @@ def create_runs_json(monkeypatch) -> pathlib.Path:
     N_RUNS: int = 100
     N_METRICS: int = 10
     _headers = ("first_name", "last_name", "email", "date")
-    _fake = faker.Faker()
+    _fake = faker.Faker("en_US")
+    _roc_fake = faker.Faker("fil_PH")
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_f:
         _file_path = pathlib.Path(temp_f.name)
         _out_data = []
         with _file_path.open("w") as out_f:
-            for run in range(N_RUNS):
+            for _ in range(N_RUNS):
                 _metrics: list[dict[str, float]] = [
                     {"x": random.random(), "y": 10 * random.random()}
                     for _ in range(N_METRICS)
                 ]
                 _run = {
-                    "name": _fake.random_object_of_concern(),
+                    "name": faker.Faker("fil_PH").random_object_of_concern(),
                     "description": _fake.text(),
-                    "metadata": {"first_name": _fake.given_name(), "last_name": _fake.last_name()},
+                    "metadata": {"first_name": _fake.first_name(), "last_name": _fake.last_name()},
                     "tags": ["test_simvue_cli"],
                 }
                 _out_data.append(_run)
