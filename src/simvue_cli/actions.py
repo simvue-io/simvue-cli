@@ -208,7 +208,7 @@ def log_metrics(run_id: str, metrics: dict[str, int | float]) -> None:
         json.dump(run_data, out_f, indent=2)
 
 
-def log_event(run_id: str, event_message: str) -> None:
+def log_event(run_id: str, event_message: str, *, log_level: str = "info") -> None:
     """Log an event for a given run
 
     Parameters
@@ -226,6 +226,7 @@ def log_event(run_id: str, event_message: str) -> None:
         {
             "message": event_message,
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "log_level": log_level,
         }
     ]
 

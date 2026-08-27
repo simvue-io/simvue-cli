@@ -489,9 +489,15 @@ def log_metrics(run_id: str, metrics: dict) -> None:
 @simvue_run.command("log.event")
 @click.argument("run_id", type=str)
 @click.argument("event_message", type=str)
-def log_event(run_id: str, event_message: str) -> None:
+@click.option(
+    "--log-level",
+    help="Set the log level for this event",
+    default="info",
+    type=click.Choice(["info", "error", "debug", "warning", "critical"]),
+)
+def log_event(run_id: str, event_message: str, log_level: str) -> None:
     """Log event to Simvue server"""
-    simvue_cli.actions.log_event(run_id, event_message)
+    simvue_cli.actions.log_event(run_id, event_message, log_level=log_level)
 
 
 @simvue_run.command("metadata")
